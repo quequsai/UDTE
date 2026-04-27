@@ -4,27 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UDTE — Technical Docs</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 7 L16 26' stroke='%2338bdf8' stroke-width='1.5'/><path d='M4 9 Q10 7 16 9 L16 26 Q10 28 4 26 Z' fill='none' stroke='%2338bdf8' stroke-width='1.5'/><path d='M28 9 Q22 7 16 9 L16 26 Q22 28 28 26 Z' fill='none' stroke='%2394a3b8' stroke-width='1.5'/></svg>">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
     *, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; min-height: 100%; background: #00000f; color: #94a3b8; font-family: 'Inter', sans-serif; }
-    nav { position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.97);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em;overflow-x:auto; }
+    :root { --bg:#00000f;--fg:#94a3b8;--heading:#f1f5f9;--sub:#475569;--card-bg:rgba(255,255,255,0.025);--card-border:rgba(255,255,255,0.06);--card-hover-border:#1e3a5f;--card-hover-bg:rgba(255,255,255,0.04);--nav-bg:rgba(2,6,23,0.97);--nav-border:#0f2744;--sep:#0f2744;--accent:#38bdf8; }
+    [data-theme="light"] { --bg:#f8fafc;--fg:#475569;--heading:#0f172a;--sub:#64748b;--card-bg:#ffffff;--card-border:#e2e8f0;--card-hover-border:#38bdf8;--card-hover-bg:#f0f9ff;--nav-bg:rgba(248,250,252,0.97);--nav-border:#e2e8f0;--sep:#e2e8f0;--accent:#0284c7; }
+    html, body { width: 100%; min-height: 100%; background: var(--bg); color: var(--fg); font-family: 'Inter', sans-serif; transition: background .2s, color .2s; }
+    nav { position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--nav-bg);border-bottom:1px solid var(--nav-border);padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em;overflow-x:auto; }
     nav > * { flex-shrink: 0; }
     @media (max-width: 640px) { nav { gap: 16px; padding: 0 12px; } .page { padding: 60px 16px 60px; } }
-    nav a { text-decoration:none; font-weight:700; color:#94a3b8; }
-    nav a.active { color:#38bdf8; }
-    nav .sep { color:#0f2744; }
+    nav a { text-decoration:none; font-weight:700; color:var(--fg); }
+    nav a.active { color:var(--accent); }
+    nav .sep { color:var(--sep); }
     .page { max-width: 800px; margin: 0 auto; padding: 100px 28px 80px; }
-    .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .2em; color: #38bdf8; text-transform: uppercase; margin-bottom: 16px; }
-    h1 { font-size: 1.8rem; font-weight: 900; color: #f1f5f9; margin-bottom: 12px; }
-    .sub { font-size: 14px; color: #475569; margin-bottom: 56px; line-height: 1.6; }
+    .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .2em; color: var(--accent); text-transform: uppercase; margin-bottom: 16px; }
+    h1 { font-size: 1.8rem; font-weight: 900; color: var(--heading); margin-bottom: 12px; }
+    .sub { font-size: 14px; color: var(--sub); margin-bottom: 56px; line-height: 1.6; }
     .cards { display: flex; flex-direction: column; gap: 16px; }
-    .card { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 28px; text-decoration: none; display: block; transition: border-color .2s, background .2s; }
-    .card:hover { border-color: #1e3a5f; background: rgba(255,255,255,0.04); }
-    .card-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .18em; color: #38bdf8; text-transform: uppercase; margin-bottom: 10px; }
-    .card h2 { font-size: 1.1rem; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; }
-    .card p { font-size: 13px; color: #64748b; line-height: 1.6; }
-    .card-link { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #38bdf8; margin-top: 14px; }
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 28px; text-decoration: none; display: block; transition: border-color .2s, background .2s; }
+    .card:hover { border-color: var(--card-hover-border); background: var(--card-hover-bg); }
+    .card-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .18em; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; }
+    .card h2 { font-size: 1.1rem; font-weight: 700; color: var(--heading); margin-bottom: 8px; }
+    .card p { font-size: 13px; color: var(--fg); line-height: 1.6; }
+    .card-link { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); margin-top: 14px; }
+    #theme-btn { position:fixed;top:48px;right:12px;z-index:9998;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(2,6,23,0.8);color:#38bdf8;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);transition:background .2s,color .2s; }
   </style>
 </head>
 <body>
@@ -57,4 +61,23 @@
   </div>
 </div>
 </body>
+<button id="theme-btn" title="Toggle light/dark">◐</button>
+<script>
+  (function(){
+    const root = document.documentElement;
+    const btn = document.getElementById('theme-btn');
+    const saved = localStorage.getItem('theme-udte');
+    const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    const apply = (light) => {
+      root.setAttribute('data-theme', light ? 'light' : 'dark');
+      btn.textContent = light ? '◑' : '◐';
+      btn.style.background = light ? 'rgba(248,250,252,0.9)' : 'rgba(2,6,23,0.8)';
+      btn.style.color = light ? '#0284c7' : '#38bdf8';
+      btn.style.borderColor = light ? '#e2e8f0' : 'rgba(255,255,255,0.1)';
+      localStorage.setItem('theme-udte', light ? 'light' : 'dark');
+    };
+    apply(saved ? saved === 'light' : systemLight);
+    btn.addEventListener('click', () => apply(root.getAttribute('data-theme') !== 'light'));
+  })();
+</script>
 </html>

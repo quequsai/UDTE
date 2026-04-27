@@ -4,21 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UDTE — Universal Digital Twin Engine</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='4' fill='%23fde047'/><ellipse cx='16' cy='16' rx='13' ry='5' fill='none' stroke='%2338bdf8' stroke-width='1.5' transform='rotate(-15 16 16)'/><circle cx='26' cy='12' r='2.5' fill='%2338bdf8'/></svg>">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
     *, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg: #00000f; --fg: #94a3b8; --heading: #f1f5f9;
+      --card-bg: rgba(255,255,255,0.025); --card-border: rgba(255,255,255,0.06);
+      --card-hover-border: #1e3a5f; --card-hover-bg: rgba(255,255,255,0.04);
+      --subtitle: #334155; --footer: #1e293b; --accent: #38bdf8;
+    }
+    [data-theme="light"] {
+      --bg: #f8fafc; --fg: #475569; --heading: #0f172a;
+      --card-bg: #ffffff; --card-border: #e2e8f0;
+      --card-hover-border: #38bdf8; --card-hover-bg: #f0f9ff;
+      --subtitle: #94a3b8; --footer: #cbd5e1; --accent: #0284c7;
+    }
+    [data-theme="light"] #stars { opacity: 0.04; }
+
     html, body {
       width: 100%; height: 100%;
-      background: #00000f;
-      color: #94a3b8;
+      background: var(--bg);
+      color: var(--fg);
       font-family: 'Inter', sans-serif;
       overflow-x: hidden;
+      transition: background .2s, color .2s;
     }
 
     /* ── star field ── */
-    #stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    #stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; transition: opacity .2s; }
 
     /* ── content ── */
     .page {
@@ -34,7 +50,7 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 10px;
       letter-spacing: .2em;
-      color: #38bdf8;
+      color: var(--accent);
       text-transform: uppercase;
       margin-bottom: 18px;
     }
@@ -42,7 +58,7 @@
     h1 {
       font-size: clamp(2rem, 5vw, 3.2rem);
       font-weight: 900;
-      color: #f1f5f9;
+      color: var(--heading);
       line-height: 1.15;
       margin-bottom: 14px;
       letter-spacing: -.01em;
@@ -51,7 +67,7 @@
     .subtitle {
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
-      color: #334155;
+      color: var(--subtitle);
       letter-spacing: .1em;
       margin-bottom: 56px;
     }
@@ -67,8 +83,8 @@
     }
 
     .card {
-      background: rgba(255,255,255,0.025);
-      border: 1px solid rgba(255,255,255,0.06);
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 32px 28px;
       width: 280px;
@@ -78,8 +94,8 @@
       display: flex; flex-direction: column; gap: 12px;
     }
     .card:hover {
-      border-color: #1e3a5f;
-      background: rgba(255,255,255,0.04);
+      border-color: var(--card-hover-border);
+      background: var(--card-hover-bg);
     }
 
     .card-icon {
@@ -91,20 +107,20 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 9px;
       letter-spacing: .18em;
-      color: #38bdf8;
+      color: var(--accent);
       text-transform: uppercase;
     }
 
     .card h2 {
       font-size: 1rem;
       font-weight: 700;
-      color: #e2e8f0;
+      color: var(--heading);
       line-height: 1.3;
     }
 
     .card p {
       font-size: 13px;
-      color: #64748b;
+      color: var(--fg);
       line-height: 1.6;
       flex-grow: 1;
     }
@@ -112,7 +128,7 @@
     .card-link {
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
-      color: #38bdf8;
+      color: var(--accent);
       letter-spacing: .08em;
       margin-top: 4px;
     }
@@ -124,8 +140,19 @@
       padding: 0 0 40px;
       font-family: 'JetBrains Mono', monospace;
       font-size: 10px;
-      color: #1e293b;
+      color: var(--footer);
       letter-spacing: .08em;
+    }
+
+    /* ── theme toggle ── */
+    #theme-btn {
+      position: fixed; top: 12px; right: 12px; z-index: 9998;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(2,6,23,0.8); color: #38bdf8;
+      font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(8px); transition: background .2s, color .2s;
     }
 
     @media (max-width: 600px) {
@@ -191,6 +218,8 @@
 
 <footer>UDTE &nbsp;·&nbsp; UNIVERSAL DIGITAL TWIN ENGINE &nbsp;·&nbsp; QUSAI QURESH 2026</footer>
 
+<button id="theme-btn" title="Toggle light/dark">◐</button>
+
 <script>
   // deterministic star field matching the simulation aesthetic
   const canvas = document.getElementById('stars');
@@ -223,6 +252,24 @@
 
   window.addEventListener('resize', resize);
   resize();
+</script>
+<script>
+  (function(){
+    const root = document.documentElement;
+    const btn = document.getElementById('theme-btn');
+    const saved = localStorage.getItem('theme-udte');
+    const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    const apply = (light) => {
+      root.setAttribute('data-theme', light ? 'light' : 'dark');
+      btn.textContent = light ? '◑' : '◐';
+      btn.style.background = light ? 'rgba(248,250,252,0.9)' : 'rgba(2,6,23,0.8)';
+      btn.style.color = light ? '#0284c7' : '#38bdf8';
+      btn.style.borderColor = light ? '#e2e8f0' : 'rgba(255,255,255,0.1)';
+      localStorage.setItem('theme-udte', light ? 'light' : 'dark');
+    };
+    apply(saved ? saved === 'light' : systemLight);
+    btn.addEventListener('click', () => apply(root.getAttribute('data-theme') !== 'light'));
+  })();
 </script>
 </body>
 </html>

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solar System Precision Engine</title>
+    <title>Barnes-Hut Engine | UDTE</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='13' height='13' fill='none' stroke='%2338bdf8' stroke-width='1.5'/><rect x='17' y='2' width='13' height='13' fill='none' stroke='%2338bdf8' stroke-width='1.5'/><rect x='2' y='17' width='13' height='13' fill='none' stroke='%2338bdf8' stroke-width='1.5'/><rect x='17' y='17' width='13' height='13' fill='none' stroke='%2338bdf8' stroke-width='1.5'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;600;800&display=swap');
@@ -55,9 +56,21 @@
 
         canvas { cursor: move; touch-action: none; }
 
+        .sidebar-toggle {
+            display: none; width: 100%; padding: 9px 16px;
+            background: rgba(2,6,23,0.98); border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            color: #38bdf8; font-family: ui-monospace, monospace;
+            font-size: 11px; font-weight: 700; letter-spacing: .1em;
+            text-align: center; cursor: pointer; flex-shrink: 0;
+        }
+
         @media (max-width: 768px) {
             body { overflow: auto; }
-            aside { max-height: 42vh !important; overflow-y: auto; }
+            .sidebar-toggle { display: block; }
+            aside { max-height: 0; overflow: hidden; transition: max-height .3s ease;
+                    border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); }
+            aside.open { max-height: 75vh; overflow-y: auto; }
             main { min-height: 52vw; flex: 1; }
             nav { overflow-x: auto; gap: 16px !important; padding: 0 12px !important; }
             nav > * { flex-shrink: 0; }
@@ -77,16 +90,10 @@
   <a href="../docs/" style="color:#94a3b8;text-decoration:none;font-weight:700;">DOCS</a>
 </nav>
 
-<!-- Chosen Palette: Deep Space Blue, Solar Gold, Planet-Specific Hues -->
-<!-- Application Structure Plan: 
-     - Main UI: A "Control Deck" for real-world planet data and custom satellite launches.
-     - Simulation: 1:1 Relative Mass ratios (normalized to Earth).
-     - Physics: Leapfrog Integration with 0 softening.
-     - Visualization: Adaptive scaling to ensure small planets (Mercury) aren't lost next to Jupiter.
--->
+<button class="sidebar-toggle" id="sidebarToggle">&#9776; SHOW CONTROLS</button>
 
 <!-- Mission Control Sidebar -->
-<aside class="w-full md:w-96 glass p-6 z-20 flex flex-col gap-6 overflow-y-auto max-h-screen border-r border-slate-800 shadow-2xl">
+<aside id="sidebar" class="w-full md:w-96 glass p-6 z-20 flex flex-col gap-6 overflow-y-auto max-h-screen border-r border-slate-800 shadow-2xl">
     <header>
         <h1 class="text-2xl font-extrabold tracking-tighter text-white">ORBITAL COMMAND</h1>
         <div class="flex items-center gap-2 mt-1">
@@ -474,6 +481,18 @@
     initSystem();
     draw();
 
+</script>
+<script>
+  (function(){
+    var btn = document.getElementById('sidebarToggle');
+    var sb  = document.getElementById('sidebar');
+    if (btn && sb) {
+      btn.addEventListener('click', function() {
+        sb.classList.toggle('open');
+        btn.innerHTML = sb.classList.contains('open') ? '&#10005; HIDE CONTROLS' : '&#9776; SHOW CONTROLS';
+      });
+    }
+  })();
 </script>
 </body>
 </html>
