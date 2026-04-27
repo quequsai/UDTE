@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sun–Venus Simulation | NASA Horizons</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══════════════════════════ SITE NAV ══════════════════════════ -->
+<nav style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.97);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em;">
+  <a href="../" style="color:#94a3b8;text-decoration:none;font-weight:700;">UDTE</a>
+  <span style="color:#0f2744;">|</span>
+  <a href="../sun-venus/" style="color:#38bdf8;text-decoration:none;font-weight:700;">SUN-VENUS</a>
+  <a href="../n-body/" style="color:#94a3b8;text-decoration:none;font-weight:700;">N-BODY</a>
+  <a href="../report/" style="color:#94a3b8;text-decoration:none;font-weight:700;">REPORT</a>
+</nav>
+
+<div class="app" style="padding-top:40px;">
+
+<!-- ════════════════════════════ SIDEBAR ════════════════════════════ -->
+<aside class="p-5 gap-4 flex flex-col sc">
+
+    <header>
+        <h1 class="text-lg font-black tracking-tight text-white">SUN–VENUS ENGINE</h1>
+        <p class="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-0.5">NASA Horizons · 3D Orbit · Light-Delayed Gravity · Elastic Collision</p>
+    </header>
+
+    <!-- MISSION CLOCK -->
+    <div class="card">
+        <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2">Mission Clock</p>
+        <div id="timerDisplay" class="mono text-xl font-bold text-sky-300">Y:0000  M:00  D:00</div>
+        <div class="flex justify-between mt-1 text-[9px] text-slate-600">
+            <span>Warp 1× → 1 week / real-sec</span>
+            <span>Clock = actual sim time</span>
+        </div>
+        <div class="mt-2 w-full bg-slate-900 rounded-full h-0.5">
+            <div id="monthBar" class="h-0.5 bg-sky-500 rounded-full" style="width:0%"></div>
+        </div>
+        <div class="flex justify-between mt-1 text-[9px] mono text-slate-600">
+            <span>Sim elapsed: <span id="simYears" class="text-emerald-400">0.000 yr</span></span>
+            <span>Week <span id="simWeek" class="text-white">0</span></span>
+        </div>
+    </div>
+
+    <!-- NASA FETCH -->
+    <div class="card space-y-3">
+        <div class="flex items-center justify-between">
+            <h3 class="text-[10px] font-black text-sky-400 uppercase tracking-widest">NASA Horizons API</h3>
+            <div id="apiDot" class="w-2 h-2 rounded-full bg-slate-600"></div>
+        </div>
+        <div>
+            <div class="flex justify-between items-baseline">
+                <label class="text-[9px] text-slate-500 font-black uppercase">Epoch Date</label>
+                <span class="text-[9px] mono text-slate-600">YYYY-MM-DD</span>
+            </div>
+            <input type="date" id="epochDate" value="2026-01-01"
+                class="w-full mt-1 bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs mono text-white outline-none">
+            <p class="text-[9px] text-slate-600 mt-1">e.g. 2026-01-01 · min 1900-01-01</p>
+        </div>
+        <div id="apiMsg" class="text-[9px] mono text-slate-500 min-h-[14px]">Ready. Fetches Sun + Venus from JPL Horizons.</div>
+        <button id="fetchBtn" class="w-full py-2.5 rounded-xl text-xs font-black uppercase bg-sky-700 hover:bg-sky-600 text-white transition-all active:scale-95">
+            FETCH FROM NASA
+        </button>
+        <button id="builtinBtn" class="w-full py-2 rounded-xl text-xs font-black uppercase bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all active:scale-95">
+            USE J2000 BUILT-IN DATA
+        </button>
+    </div>
+
+    <!-- SIM CONTROLS -->
+    <div class="card space-y-3">
+        <div class="flex gap-2">
+            <button id="playBtn" class="flex-1 py-2.5 rounded-xl text-xs font-black uppercase bg-emerald-700 hover:bg-emerald-600 text-white transition-all active:scale-95">Pause</button>
+            <button id="resetBtn" class="px-4 rounded-xl text-xs font-black uppercase bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-all active:scale-95">Reset</button>
+        </div>
+        <div class="space-y-1">
+            <div class="flex justify-between text-[9px] font-black text-slate-500 uppercase">
+                <span>Time Warp</span><span id="warpLabel" class="mono text-sky-400">1.0×</span>
+            </div>
+            <input type="range" id="warpSlider" min="0.1" max="50" step="0.1" value="1">
+        </div>
+        <div class="space-y-1">
+            <div class="flex justify-between text-[9px] font-black text-slate-500 uppercase">
+                <span>Zoom</span><span id="zoomLabel" class="mono text-sky-400">1.0</span>
+            </div>
+            <input type="range" id="zoomSlider" min="0.001" max="200" step="0.001" value="1">
+        </div>
+    </div>
+
+    <!-- TELEMETRY -->
+    <div class="card space-y-2">
+        <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Live Telemetry</h3>
+        <div id="telemetry" class="space-y-2 text-[10px] mono text-slate-400"></div>
+    </div>
+
+    <!-- REFERENCE TELEMETRY -->
+    <div class="card space-y-3">
+        <div class="flex items-center justify-between">
+            <h3 class="text-[9px] font-black text-violet-400 uppercase tracking-widest">Reference Ephemeris</h3>
+            <span class="text-[8px] text-slate-600 uppercase font-bold">Horizons daily + Kepler</span>
+        </div>
+        <p class="text-[9px] text-slate-600 leading-relaxed">
+            Where bodies should be per JPL Horizons actual data (when in range 1900–2100) and analytic Kepler propagation. Drift vs sim reveals light-delay and integration error.
+        </p>
+        <div id="refTelemetry" class="space-y-3 text-[10px] mono text-slate-400"></div>
+    </div>
+
+    <!-- PHYSICS GUIDE -->
+    <div class="card space-y-3">
+        <h3 class="text-[9px] font-black text-sky-400 uppercase tracking-widest">Physics Guide</h3>
+
+        <details>
+            <summary class="text-[11px] font-bold text-slate-300 flex justify-between items-center">
+                <span>Light-Delayed Gravity</span><span class="text-slate-600 text-xs">▸</span>
+            </summary>
+            <div class="explain-body">
+                In Newtonian gravity, force is <em>instantaneous</em> — the Sun would "know" Venus's position right now.
+                This simulation instead propagates gravity at <strong>the speed of light (c = 299,792 km/s)</strong>.<br><br>
+                When computing the gravitational pull of the Sun on Venus at time <code>t</code>, we look up where the Sun was
+                at the <em>light-delay time</em> <code>t_ret = t − d/c</code>, where <code>d</code> is the current
+                Sun–Venus distance. The force direction points from Venus toward that past position of the Sun.
+                <br><br>
+                For Sun–Venus the light delay is <strong>~360 seconds (~6 minutes)</strong>. The orbital effect is tiny
+                but physically correct — this is the same principle behind gravitational wave propagation.
+            </div>
+        </details>
+
+        <details>
+            <summary class="text-[11px] font-bold text-slate-300 flex justify-between items-center">
+                <span>Symplectic Leapfrog</span><span class="text-slate-600 text-xs">▸</span>
+            </summary>
+            <div class="explain-body">
+                The simulation uses <strong>Verlet/leapfrog integration</strong>, a symplectic method that conserves
+                orbital energy over long timescales far better than Euler integration.<br><br>
+                Each timestep: <code>v += a·(dt/2)</code>, then <code>x += v·dt</code>, forces are recomputed,
+                then <code>v += a·(dt/2)</code> again (kick-drift-kick). The substep size is
+                <strong>3,600 sim-seconds (1 hour)</strong> for accuracy despite the week-per-second tick rate.
+            </div>
+        </details>
+
+        <details>
+            <summary class="text-[11px] font-bold text-slate-300 flex justify-between items-center">
+                <span>Elastic Soft-Body Collision</span><span class="text-slate-600 text-xs">▸</span>
+            </summary>
+            <div class="explain-body">
+                When the centre-to-centre distance falls below the sum of physical radii
+                (<strong>Sun r = 695,700 km, Venus r = 6,052 km</strong>), an elastic collision is triggered.<br><br>
+                The impulse along the collision normal conserves both momentum and kinetic energy
+                (coefficient of restitution = 1). Bodies are also displaced apart to prevent interpenetration.
+                There is <strong>no softening</strong> on the gravitational potential — the only floor is the
+                physical surface collision itself.
+            </div>
+        </details>
+
+        <details>
+            <summary class="text-[11px] font-bold text-slate-300 flex justify-between items-center">
+                <span>Time Scale & Units</span><span class="text-slate-600 text-xs">▸</span>
+            </summary>
+            <div class="explain-body">
+                All physics runs in <strong>km · km/s · seconds</strong> — real SI-adjacent units.<br><br>
+                <strong>Tick rate:</strong> at Warp 1×, 1 real second advances 604,800 sim-seconds (1 week).
+                At Warp 10×, 1 real second advances 10 sim-weeks, and so on.<br>
+                <strong>Mission Clock:</strong> shows the actual simulated calendar time elapsed (Y/M/D),
+                derived directly from <code>simTime</code>. It speeds up and slows down with the
+                time warp slider — there is no separate clock rate.<br><br>
+                G = <code>6.674 × 10⁻²⁰ km³/(kg·s²)</code><br>
+                c = <code>299,792.458 km/s</code>
+            </div>
+        </details>
+
+        <details>
+            <summary class="text-[11px] font-bold text-slate-300 flex justify-between items-center">
+                <span>NASA Horizons Data</span><span class="text-slate-600 text-xs">▸</span>
+            </summary>
+            <div class="explain-body">
+                Position and velocity are fetched from <strong>JPL Horizons</strong>
+                (<code>ssd.jpl.nasa.gov/api/horizons.api</code>), NASA's high-precision ephemeris service
+                used for real mission planning.<br><br>
+                We request <strong>state vectors</strong> — Cartesian position (km) and velocity (km/s) —
+                for the Sun and Venus relative to the Solar System Barycenter at your chosen epoch.<br><br>
+                <strong>Coordinate frame:</strong> Horizons defaults to ICRF (equatorial), whose x-y plane is
+                Earth's equatorial plane — <em>not</em> the orbital plane. We request
+                <code>REF_PLANE=ECLIPTIC</code> so the output is rotated to the <strong>J2000 mean ecliptic</strong>.
+                In that frame, x-y is the ecliptic plane and z captures Venus's 3.39° inclination.
+                All three axes are used — the simulation is fully 3D.<br><br>
+                The built-in J2000 fallback stores values in ICRF (for source transparency) and applies
+                the same ecliptic rotation via <code>icrfToEcliptic()</code> — a rotation by the
+                obliquity ε = 23.439° about the x-axis — before passing data to the sim.
+            </div>
+        </details>
+    </div>
+
+</aside>
+
+<!-- ════════════════════════════ VIEWPORT ════════════════════════════ -->
+<main id="viewport">
+    <canvas id="c"></canvas>
+
+    <!-- HUD -->
+    <div class="absolute top-5 right-5 pointer-events-none">
+        <div class="bg-black/80 backdrop-blur px-4 py-3 rounded-2xl border border-white/8 space-y-1">
+            <div class="flex justify-between gap-8 text-[9px] font-black uppercase">
+                <span class="text-slate-500">Source</span>
+                <span id="hudSrc" class="text-sky-400">Built-in J2000</span>
+            </div>
+            <div class="flex justify-between gap-8 text-[9px] font-black uppercase">
+                <span class="text-slate-500">Light Delay</span>
+                <span id="hudDelay" class="mono text-yellow-400">— s</span>
+            </div>
+            <div class="flex justify-between gap-8 text-[9px] font-black uppercase">
+                <span class="text-slate-500">Distance</span>
+                <span id="hudDist" class="mono text-white">— AU</span>
+            </div>
+            <div class="flex justify-between gap-8 text-[9px] font-black uppercase">
+                <span class="text-slate-500">Collision</span>
+                <span id="hudColl" class="mono text-slate-600">None</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scale bar -->
+    <div class="absolute bottom-5 left-5 pointer-events-none">
+        <div class="w-24 h-px bg-white/25 mb-1"></div>
+        <span id="scaleLabel" class="text-[9px] mono text-slate-500">— AU</span>
+    </div>
+
+    <!-- Zoom / camera btns -->
+    <div class="absolute bottom-5 right-5 flex flex-col gap-2">
+        <button id="zIn"     class="w-11 h-11 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center justify-center text-white font-bold hover:bg-slate-800">＋</button>
+        <button id="zOut"    class="w-11 h-11 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center justify-center text-white font-bold hover:bg-slate-800">－</button>
+        <button id="zRec"    class="w-11 h-11 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center justify-center text-sky-400 hover:bg-slate-800">回</button>
+        <button id="camTop"  class="w-11 h-7 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center justify-center text-[9px] font-black text-violet-400 hover:bg-slate-800 uppercase">Top</button>
+        <button id="camSide" class="w-11 h-7 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center justify-center text-[9px] font-black text-violet-400 hover:bg-slate-800 uppercase">Side</button>
+    </div>
+</main>
+</div>
+
+<script src="simulation.js"></script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UDTE — Universal Digital Twin Engine</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    *, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #00000f;
+      color: #94a3b8;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ── star field ── */
+    #stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+    /* ── content ── */
+    .page {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 60px 24px 80px;
+      text-align: center;
+    }
+
+    .label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .2em;
+      color: #38bdf8;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 900;
+      color: #f1f5f9;
+      line-height: 1.15;
+      margin-bottom: 14px;
+      letter-spacing: -.01em;
+    }
+
+    .subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #334155;
+      letter-spacing: .1em;
+      margin-bottom: 56px;
+    }
+
+    /* ── cards ── */
+    .cards {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 960px;
+      width: 100%;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 32px 28px;
+      width: 280px;
+      text-align: left;
+      transition: border-color .2s, background .2s;
+      text-decoration: none;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .card:hover {
+      border-color: #1e3a5f;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .card-icon {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .card-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .18em;
+      color: #38bdf8;
+      text-transform: uppercase;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      line-height: 1.3;
+    }
+
+    .card p {
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+      flex-grow: 1;
+    }
+
+    .card-link {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #38bdf8;
+      letter-spacing: .08em;
+      margin-top: 4px;
+    }
+
+    /* ── footer ── */
+    footer {
+      position: relative; z-index: 1;
+      text-align: center;
+      padding: 0 0 40px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: #1e293b;
+      letter-spacing: .08em;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="page">
+  <div class="label">CPSC 4990 — Independent Study</div>
+  <h1>Universal Digital Twin Engine</h1>
+  <div class="subtitle">QUSAI QURESH &nbsp;·&nbsp; APRIL 2026 &nbsp;·&nbsp; UNIVERSITY OF LETHBRIDGE</div>
+
+  <div class="cards">
+
+    <a class="card" href="sun-venus/">
+      <div class="card-icon">☀</div>
+      <div class="card-tag">Live Simulation</div>
+      <h2>Sun-Venus Engine</h2>
+      <p>Two-body orbital simulation with light-delayed gravity and leapfrog integration. Pulls real initial conditions from NASA JPL Horizons and compares against the analytic Kepler solution in real time.</p>
+      <div class="card-link">LAUNCH &rarr;</div>
+    </a>
+
+    <a class="card" href="n-body/">
+      <div class="card-icon">🪐</div>
+      <div class="card-tag">Live Simulation</div>
+      <h2>N-Body Solar System</h2>
+      <p>Full ten-body solar system simulation, Sun through Pluto. Every body exerts gravitational force on every other body, with light-delayed gravity throughout. Built on the same physics engine as Sun-Venus.</p>
+      <div class="card-link">LAUNCH &rarr;</div>
+    </a>
+
+    <a class="card" href="report/">
+      <div class="card-icon">&#128196;</div>
+      <div class="card-tag">Final Report</div>
+      <h2>CPSC 4990 Final Report</h2>
+      <p>The full write-up covering drift analysis, Monte Carlo stability testing across six timestep configurations, and what building a physics simulation from scratch actually taught me about maths, CS, and Godel.</p>
+      <div class="card-link">READ &rarr;</div>
+    </a>
+
+  </div>
+</div>
+
+<footer>UDTE &nbsp;·&nbsp; UNIVERSAL DIGITAL TWIN ENGINE &nbsp;·&nbsp; QUSAI QURESH 2026</footer>
+
+<script>
+  // deterministic star field matching the simulation aesthetic
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    drawStars();
+  }
+
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const rng = (seed) => {
+      let s = seed;
+      return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+    };
+    const rand = rng(42);
+    for (let i = 0; i < 500; i++) {
+      const x = rand() * canvas.width;
+      const y = rand() * canvas.height;
+      const r = rand() * 1.2 + 0.2;
+      const a = rand() * 0.6 + 0.1;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.fill();
+    }
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+</script>
+</body>
+</html>
