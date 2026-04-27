@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relativistic N-body | UDTE Docs</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+    *, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #00000f; color: #94a3b8; font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.75; padding-top: 40px; }
+    nav { position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.97);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em; }
+    nav a { text-decoration:none; font-weight:700; color:#94a3b8; }
+    nav a.active { color:#38bdf8; }
+    nav .sep { color:#0f2744; }
+    article { max-width: 780px; margin: 0 auto; padding: 60px 28px 100px; }
+    .doc-header { margin-bottom: 48px; padding-bottom: 28px; border-bottom: 1px solid #0f2744; }
+    .doc-header .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .2em; color: #38bdf8; text-transform: uppercase; margin-bottom: 12px; }
+    .doc-header h1 { font-size: 1.7rem; font-weight: 700; color: #f1f5f9; line-height: 1.25; }
+    h2 { font-size: 1.2rem; font-weight: 700; color: #e2e8f0; margin-top: 52px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #0f2744; }
+    h3 { font-size: 1rem; font-weight: 600; color: #7dd3fc; margin-top: 28px; margin-bottom: 10px; }
+    p { margin-bottom: 16px; color: #94a3b8; }
+    hr { border: none; border-top: 1px solid #0f2744; margin: 36px 0; }
+    strong { color: #e2e8f0; font-weight: 600; }
+    em { color: #cbd5e1; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #0a1628; color: #7dd3fc; padding: 2px 6px; border-radius: 4px; }
+    pre { background: #060d1a; border: 1px solid #0f2744; border-radius: 8px; padding: 18px 20px; overflow-x: auto; margin: 18px 0 22px; }
+    pre code { background: none; padding: 0; font-size: 13px; line-height: 1.6; color: #7dd3fc; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+    th { background: #060d1a; color: #e2e8f0; font-weight: 600; padding: 10px 14px; text-align: left; border: 1px solid #0f2744; }
+    td { padding: 9px 14px; border: 1px solid #0f2744; color: #94a3b8; }
+    .back { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #475569; text-decoration: none; margin-bottom: 32px; letter-spacing: .06em; }
+    .back:hover { color: #38bdf8; }
+    .highlight { background: rgba(56,189,248,0.06); border-left: 3px solid #38bdf8; padding: 14px 18px; border-radius: 0 6px 6px 0; margin: 20px 0; }
+    .highlight p { margin: 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="../../">UDTE</a>
+  <span class="sep">|</span>
+  <a href="../../sun-venus/">SUN-VENUS</a>
+  <a href="../../n-body/">N-BODY</a>
+  <a href="../../barnes-hut/">BARNES-HUT</a>
+  <a href="../../report/">REPORT</a>
+  <a href="../../docs/" class="active">DOCS</a>
+</nav>
+<article>
+  <a class="back" href="../">&larr; DOCS</a>
+  <div class="doc-header">
+    <div class="label">Advanced N-body</div>
+    <h1>Building an N-body Simulator with Post-Newtonian General Relativity</h1>
+  </div>
+
+  <p>A fully relativistic N-body gravitational simulator for the inner solar system requires three interlocking components: the <strong>1PN Einstein-Infeld-Hoffmann equations of motion</strong> (the same formulation JPL uses for DE440/DE441), a <strong>high-order adaptive integrator</strong> like IAS15 or DOP853 that handles velocity-dependent forces, and <strong>rigorous validation</strong> against JPL Horizons ephemeris data. The critical physics payoff is reproducing Mercury's anomalous perihelion precession of <strong>42.98 arcseconds per century</strong> — the signature confirmation of general relativity — while achieving kilometer-level positional accuracy over multi-year integrations.</p>
+
+  <hr>
+
+  <h2>1. The Newtonian Foundation and Post-Newtonian Corrections</h2>
+
+  <h3>Newtonian pairwise acceleration</h3>
+  <p>The starting point is the standard N-body gravitational acceleration. For body <em>i</em> in a system of N bodies:</p>
+  <pre><code>r̈_i = Σ_{j≠i} μ_j · (r_j - r_i) / r_ij³</code></pre>
+  <p>where <strong>μ_j = G·m_j</strong> is the gravitational parameter of body j, <strong>r_ij = |r_i − r_j|</strong> is the Euclidean distance. For the 5-body Sun-Mercury-Venus-Earth-Mars system, there are 10 unique pairwise interactions.</p>
+
+  <h3>The 1PN equations: JPL's PPN formulation</h3>
+  <p>The JPL planetary ephemerides DE440/DE441 use the <strong>parametrized post-Newtonian (PPN)</strong> form of the equations of motion. Setting β = γ = 1 (pure general relativity), the acceleration of body <em>i</em> in barycentric harmonic coordinates is:</p>
+  <pre><code>r̈_i = Σ_{j≠i} (μ_j/r_ij³)(r_j − r_i) · {
+    1
+    − (4/c²) Σ_{k≠i} μ_k/r_ik
+    − (1/c²) Σ_{k≠j} μ_k/r_jk
+    + (v_i²/c²) + (2v_j²/c²)
+    − (4/c²)(ṙ_i · ṙ_j)
+    − (3/2c²)[(r_i − r_j)·ṙ_j / r_ij]²
+    + (1/2c²)(r_j − r_i)·r̈_j^N
+}
++ (1/c²) Σ_{j≠i} (μ_j/r_ij³) · [(r_i − r_j)·(4ṙ_i − 3ṙ_j)] · (ṙ_i − ṙ_j)
++ (7/2c²) Σ_{j≠i} μ_j · r̈_j^N / r_ij</code></pre>
+  <p>This is Equation 8-1 from Standish &amp; Williams in the <em>Explanatory Supplement to the Astronomical Almanac</em>, the exact equation used by JPL. This 1PN formulation captures <strong>Mercury's perihelion precession</strong> (42.98 arcsec/century), de Sitter geodetic precession, and the metric structure underlying the Shapiro time delay.</p>
+
+  <h3>GM values and physical constants</h3>
+  <p><strong>GM (gravitational parameter)</strong> is known far more precisely than G or M individually. Always use GM directly, never compute G×M. Values from JPL DE440:</p>
+  <table>
+    <tr><th>Body</th><th>GM (km³/s²)</th></tr>
+    <tr><td>Sun</td><td>132712440041.279419</td></tr>
+    <tr><td>Mercury</td><td>22031.868551</td></tr>
+    <tr><td>Venus</td><td>324858.592000</td></tr>
+    <tr><td>Earth</td><td>398600.435507</td></tr>
+    <tr><td>Mars system</td><td>42828.375816</td></tr>
+  </table>
+  <p>Additional constants: <strong>c = 299792.458 km/s</strong> (exact), <strong>1 AU = 149597870.700 km</strong> (IAU 2012, exact).</p>
+
+  <hr>
+
+  <h2>2. Numerical Integrators: From Leapfrog to IAS15</h2>
+
+  <h3>Symplectic leapfrog</h3>
+  <p>The kick-drift-kick leapfrog (Stormer-Verlet) is the workhorse 2nd-order symplectic integrator. Symplecticity means energy error oscillates but never drifts secularly — a critical advantage for long integrations. The cost is just 1 force evaluation per step.</p>
+  <p><strong>The symplecticity problem with PN forces:</strong> Post-Newtonian corrections introduce velocity-dependent forces, making the Hamiltonian non-separable. Workarounds include treating PN forces as small perturbative kicks or using a non-symplectic adaptive integrator like IAS15 that handles velocity-dependent forces natively.</p>
+
+  <h3>IAS15: the gold standard for PN-corrected N-body</h3>
+  <p>The <strong>IAS15 integrator</strong> (Rein &amp; Spiegel 2015), used in the REBOUND code, is a 15th-order implicit method based on Gauss-Radau quadrature. Key advantages:</p>
+  <p>Near machine-precision accuracy — with ~100 steps per orbit, truncation error per step is ~(1/100)^15 ≈ 10^-30, far below double-precision roundoff (~10^-16). Handles velocity-dependent forces natively with no separability requirement. Automatic adaptive stepping via convergence of the highest-order coefficient. Only 8 force evaluations per step with ~2 predictor-corrector iterations.</p>
+
+  <h3>Integrator comparison</h3>
+  <table>
+    <tr><th>Integrator</th><th>Order</th><th>Force evals/step</th><th>Symplectic</th><th>Handles PN</th><th>Adaptive</th></tr>
+    <tr><td>Leapfrog</td><td>2</td><td>1</td><td>Yes</td><td>No</td><td>No</td></tr>
+    <tr><td>Yoshida 4</td><td>4</td><td>3</td><td>Yes</td><td>No</td><td>No</td></tr>
+    <tr><td>RK4</td><td>4</td><td>4</td><td>No</td><td>Yes</td><td>No</td></tr>
+    <tr><td>DOP853</td><td>8(5,3)</td><td>12</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>IAS15</td><td>15</td><td>~16</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+  </table>
+
+  <hr>
+
+  <h2>3. Force Computation: Barnes-Hut and FMM</h2>
+
+  <h3>Direct summation: optimal for N ≤ 10,000</h3>
+  <p>For 5 bodies, direct O(N²) summation computes all 10 unique pairs and is trivially optimal — tree-based methods carry significant constant-factor overhead for small N.</p>
+
+  <h3>Barnes-Hut octree for O(N log N) scaling</h3>
+  <p>The Barnes-Hut algorithm hierarchically decomposes space into an octree. Each internal node stores the total mass and center of mass of all descendants. The <strong>multipole acceptance criterion</strong> (MAC): if a cell of size s is at distance d from the target body and s/d &lt; θ (typically θ = 0.5), the entire cell is treated as a single point mass.</p>
+  <pre><code>function compute_force(body, node, θ):
+    if node is leaf:
+        if node.body == body: return 0
+        return pairwise_acceleration(body, node.body)
+
+    d = |node.center_of_mass - body.position|
+    if node.size / d &lt; θ:
+        return node.total_mass / d² * unit_direction  // monopole approx
+
+    return Σ compute_force(body, child_k, θ)  // recurse into children</code></pre>
+
+  <h3>Memory layout: Structure of Arrays</h3>
+  <p><strong>Structure of Arrays (SoA)</strong> stores each attribute contiguously across all bodies. For force computation, loading <code>x[j:j+8]</code> fills one cache line with 100% useful data and enables SIMD vectorization — AVX2 processes 4 doubles simultaneously from contiguous arrays. Measured speedups from AoS to SoA: <strong>3x typical, up to 19x on Xeon Phi</strong>.</p>
+
+  <hr>
+
+  <h2>4. Validating Against JPL Horizons</h2>
+
+  <h3>The validation workflow</h3>
+  <p><strong>Step 1:</strong> Fetch initial conditions for all bodies at epoch t₀ from Horizons, using barycentric ICRF coordinates and TDB time scale.</p>
+  <p><strong>Step 2:</strong> Integrate the system from t₀ to t₁ using your chosen integrator and force model.</p>
+  <p><strong>Step 3:</strong> Fetch Horizons state vectors at regular comparison times between t₀ and t₁.</p>
+  <p><strong>Step 4:</strong> Compute position error, RMS error, relative energy error, and angular momentum conservation at each comparison time.</p>
+  <p><strong>Step 5:</strong> Plot error growth curves. Linear growth indicates systematic error (missing physics); quadratic growth suggests integrator drift; √t growth indicates optimal roundoff behavior.</p>
+
+  <h3>Mercury perihelion precession as the key GR validation</h3>
+  <p>To measure the GR-induced precession: detect perihelion passages by finding local minima of |r_Mercury − r_Sun|, compute the Laplace-Runge-Lenz vector at each perihelion, track the angle over time and fit a linear trend, then isolate the GR contribution by running simulations with and without 1PN corrections. The difference should yield <strong>42.98 ± ~0.05 arcsec/century</strong>.</p>
+  <p>Mercury completes ~415.2 orbits per century, so the GR precession per orbit is ~0.1035 arcsec, corresponding to ~29 km of perihelion displacement per orbit — measurable even in short integrations.</p>
+
+  <div class="highlight">
+    <p>Without GR (Newtonian only), Mercury's position error grows to ~100–1000 km per year as the missing ~0.1 arcsec/orbit precession accumulates. Over 100 years, this becomes catastrophic (&gt;10⁵ km). Adding 1PN corrections reduces Mercury's error by 1–2 orders of magnitude.</p>
+  </div>
+
+  <hr>
+
+  <h2>5. Optimization: SIMD, Kahan Summation, Compiler Flags</h2>
+
+  <h3>SIMD vectorization of the inner force loop</h3>
+  <p>With SoA layout, the inner loop processes 4 interactions simultaneously using AVX2 doubles. Measured speedup from AVX2 vectorization: ~42% over optimized scalar. AVX-512 doubles this again for supported hardware. Combine with OpenMP over the outer loop for multiplicative speedups: SIMD × thread count.</p>
+
+  <h3>Kahan compensated summation</h3>
+  <p>When summing N force contributions, naive summation accumulates O(ε·N) roundoff error. Kahan summation reduces this to O(ε) by tracking a running compensation term:</p>
+  <pre><code>struct KahanAccumulator {
+    double sum = 0.0, comp = 0.0;
+    void add(double value) {
+        double y = value - comp;
+        double t = sum + y;
+        comp = (t - sum) - y;
+        sum = t;
+    }
+};</code></pre>
+
+  <h3>Compiler flags and their dangers</h3>
+  <p><code>-ffast-math</code> is dangerous: it enables reassociation of floating-point operations, which <strong>destroys Kahan compensated summation</strong> by optimizing away the compensation term (algebraically zero, but not in finite precision). Use <code>-fno-math-errno -fno-trapping-math -ffinite-math-only</code> instead.</p>
+
+  <hr>
+
+  <h2>Conclusion</h2>
+  <p>The most important architectural decisions are: (1) use the exact 1PN PPN equation from Standish's Equation 8-1 with β = γ = 1, which is precisely what JPL uses for DE440; (2) choose <strong>IAS15 or DOP853</strong> as the integrator, since velocity-dependent PN forces break symplecticity and these methods handle them natively at high order; (3) validate against Mercury's <strong>42.98 arcsec/century perihelion precession</strong> as the definitive GR benchmark.</p>
+  <p>For the 5-body inner solar system, direct O(N²) summation with 10 pairs is trivially optimal. The performance-critical path is the PN-corrected force evaluation, where SoA memory layout, AVX2 SIMD, and Kahan summation together yield order-of-magnitude improvements in both speed and accuracy. The final system should achieve <strong>kilometer-level accuracy over years</strong> and reproduce the relativistic precession within 0.05% after a few simulated centuries.</p>
+
+</article>
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Precision Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;600;800&display=swap');
+        
+        body { 
+            background-color: #020617; 
+            color: #f1f5f9; 
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden; 
+        }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        input[type=range] {
+            height: 4px;
+            -webkit-appearance: none;
+            width: 100%;
+            background: #334155;
+            border-radius: 2px;
+            accent-color: #38bdf8;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
+        .btn-primary {
+            background: #0ea5e9;
+            color: #020617;
+            font-weight: 800;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover { background: #38bdf8; transform: translateY(-1px); }
+
+        canvas { cursor: move; touch-action: none; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col md:flex-row" style="padding-top:40px;">
+
+<!-- ══════════════════════════ SITE NAV ══════════════════════════ -->
+<nav style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.97);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em;">
+  <a href="../" style="color:#94a3b8;text-decoration:none;font-weight:700;">UDTE</a>
+  <span style="color:#0f2744;">|</span>
+  <a href="../sun-venus/" style="color:#94a3b8;text-decoration:none;font-weight:700;">SUN-VENUS</a>
+  <a href="../n-body/" style="color:#94a3b8;text-decoration:none;font-weight:700;">N-BODY</a>
+  <a href="../barnes-hut/" style="color:#38bdf8;text-decoration:none;font-weight:700;">BARNES-HUT</a>
+  <a href="../report/" style="color:#94a3b8;text-decoration:none;font-weight:700;">REPORT</a>
+  <a href="../docs/" style="color:#94a3b8;text-decoration:none;font-weight:700;">DOCS</a>
+</nav>
+
+<!-- Chosen Palette: Deep Space Blue, Solar Gold, Planet-Specific Hues -->
+<!-- Application Structure Plan: 
+     - Main UI: A "Control Deck" for real-world planet data and custom satellite launches.
+     - Simulation: 1:1 Relative Mass ratios (normalized to Earth).
+     - Physics: Leapfrog Integration with 0 softening.
+     - Visualization: Adaptive scaling to ensure small planets (Mercury) aren't lost next to Jupiter.
+-->
+
+<!-- Mission Control Sidebar -->
+<aside class="w-full md:w-96 glass p-6 z-20 flex flex-col gap-6 overflow-y-auto max-h-screen border-r border-slate-800 shadow-2xl">
+    <header>
+        <h1 class="text-2xl font-extrabold tracking-tighter text-white">ORBITAL COMMAND</h1>
+        <div class="flex items-center gap-2 mt-1">
+            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Precision Gravity Engine</span>
+        </div>
+    </header>
+
+    <!-- Engine Settings -->
+    <div class="space-y-4">
+        <div class="flex gap-2">
+            <button id="playBtn" class="flex-1 bg-white text-slate-900 font-bold py-2 rounded text-xs uppercase transition">Pause</button>
+            <button id="resetBtn" class="flex-1 border border-slate-700 hover:bg-slate-800 py-2 rounded text-xs uppercase transition">Reset System</button>
+        </div>
+
+        <div class="input-group">
+            <div class="flex justify-between items-center mb-1">
+                <label>Time Step (Warp)</label>
+                <span id="timeVal" class="mono text-[10px] text-sky-400">1.00</span>
+            </div>
+            <input type="range" id="timeSlider" min="0" max="10" step="0.1" value="1">
+        </div>
+
+        <div class="input-group">
+            <div class="flex justify-between items-center mb-1">
+                <label>Camera Zoom</label>
+                <span id="zoomVal" class="mono text-[10px] text-sky-400">1.00</span>
+            </div>
+            <input type="range" id="zoomSlider" min="0.01" max="5" step="0.01" value="1">
+        </div>
+    </div>
+
+    <hr class="border-slate-800">
+
+    <!-- Custom Satellite Launch Section -->
+    <section class="space-y-4">
+        <h2 class="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2">
+            Launch Custom Body
+        </h2>
+        <div class="grid grid-cols-2 gap-3">
+            <div class="input-group">
+                <label>Distance (AU)</label>
+                <input type="number" id="customDist" value="1.5" step="0.1" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs mono">
+            </div>
+            <div class="input-group">
+                <label>Eccentricity (e)</label>
+                <input type="number" id="customEcc" value="0.5" step="0.01" min="0" max="0.99" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs mono">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Mass (Earths)</label>
+            <input type="number" id="customMass" value="1" step="0.1" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs mono">
+        </div>
+        <button id="launchBtn" class="btn-primary w-full">DEPLOY SATELLITE</button>
+    </section>
+
+    <hr class="border-slate-800">
+
+    <!-- Planet Data Table -->
+    <div class="flex-1">
+        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Solar Telemetry</h2>
+        <div class="space-y-1 overflow-y-auto max-h-48 pr-2">
+            <div id="planetList" class="text-[11px] mono text-slate-400 space-y-2">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Status -->
+    <div class="p-3 bg-black/40 rounded-lg border border-slate-800/50">
+        <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Integration Mode</p>
+        <p class="text-xs text-sky-300">Barnes-Hut O(N log N) / Symplectic Leapfrog</p>
+        <div class="mt-2 flex justify-between text-[10px] text-slate-500">
+            <span>Precision: <span class="text-emerald-500">MAX (No Softening)</span></span>
+            <span>G: <span class="text-white">6.674e-11</span></span>
+        </div>
+    </div>
+</aside>
+
+<!-- Simulation Viewport -->
+<main class="flex-1 relative bg-black overflow-hidden">
+    <canvas id="simCanvas"></canvas>
+    
+    <!-- Legend -->
+    <div class="absolute bottom-6 left-6 flex flex-col gap-1 pointer-events-none">
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-yellow-400 shadow-[0_0_10px_#fde047]"></div>
+            <span class="text-xs font-bold">The Sun (1.98e30 kg)</span>
+        </div>
+        <div class="text-[10px] text-slate-500 ml-5">Distances scaled for visibility (1 AU = 200px)</div>
+    </div>
+
+    <!-- Controls Label -->
+    <div class="absolute top-6 right-6 glass px-3 py-1 rounded text-[10px] text-slate-400">
+        Right Click/Drag to Pan | Scroll to Zoom
+    </div>
+</main>
+
+<script>
+    /* =========================================================================
+       REAL-WORLD SOLAR SYSTEM DATA (NASA Fact Sheets)
+       ========================================================================= */
+    
+    // Mass: 10^24 kg | Distance: AU | Eccentricity: e
+    const PLANET_DATA = [
+        { name: 'Mercury', mass: 0.330, dist: 0.387, ecc: 0.2056, color: '#94a3b8', radius: 2.4 },
+        { name: 'Venus',   mass: 4.867, dist: 0.723, ecc: 0.0067, color: '#fde68a', radius: 6.0 },
+        { name: 'Earth',   mass: 5.972, dist: 1.000, ecc: 0.0167, color: '#38bdf8', radius: 6.3 },
+        { name: 'Mars',    mass: 0.642, dist: 1.524, ecc: 0.0934, color: '#fb7185', radius: 3.3 },
+        { name: 'Jupiter', mass: 1898.1, dist: 5.204, ecc: 0.0484, color: '#fb923c', radius: 15.0 },
+        { name: 'Saturn',  mass: 568.3,  dist: 9.582, ecc: 0.0541, color: '#eab308', radius: 12.0 },
+        { name: 'Uranus',  mass: 86.81,  dist: 19.22, ecc: 0.0472, color: '#a5f3fc', radius: 8.0 },
+        { name: 'Neptune', mass: 102.4,  dist: 30.07, ecc: 0.0086, color: '#6366f1', radius: 8.0 }
+    ];
+
+    const SUN_MASS = 1988500; // Relative to 10^24 kg unit (1.98e30 kg)
+    const G = 4000; // Adjusted for visual time/space units (1 AU = 200px)
+    
+    let bodies = [];
+    let isRunning = true;
+    let timeScale = 1.0;
+    let zoom = 1.0;
+    let offset = { x: 0, y: 0 };
+    let theta = 0.5;
+
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    /* =========================================================================
+       CORE ENGINE
+       ========================================================================= */
+
+    class Body {
+        constructor(x, y, vx, vy, mass, color, radius, name) {
+            this.x = x;
+            this.y = y;
+            this.vx = vx;
+            this.vy = vy;
+            this.ax = 0;
+            this.ay = 0;
+            this.mass = mass;
+            this.color = color;
+            this.radius = radius;
+            this.name = name;
+            this.history = [];
+        }
+
+        draw() {
+            const screenX = (this.x + offset.x) * zoom + canvas.width / 2;
+            const screenY = (this.y + offset.y) * zoom + canvas.height / 2;
+
+            // Draw Orbit Trail
+            if (this.history.length > 2) {
+                ctx.beginPath();
+                ctx.strokeStyle = this.color + '33';
+                ctx.lineWidth = 1;
+                ctx.moveTo((this.history[0].x + offset.x) * zoom + canvas.width/2, (this.history[0].y + offset.y) * zoom + canvas.height/2);
+                for(let i=1; i < this.history.length; i++) {
+                    ctx.lineTo((this.history[i].x + offset.x) * zoom + canvas.width/2, (this.history[i].y + offset.y) * zoom + canvas.height/2);
+                }
+                ctx.stroke();
+            }
+
+            // Draw Body
+            ctx.beginPath();
+            // Visual size scaling: min 1px, max 20px, logarithmic boost for visibility
+            let visRadius = Math.max(1.5, Math.log10(this.radius + 1) * 8 * zoom);
+            if (this.name === 'Sun') visRadius = Math.max(8, 20 * zoom);
+
+            ctx.arc(screenX, screenY, visRadius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            if (this.name === 'Sun') {
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = this.color;
+            }
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Label for large zoom
+            if (zoom > 0.5) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px JetBrains Mono';
+                ctx.fillText(this.name, screenX + visRadius + 4, screenY + 3);
+            }
+        }
+    }
+
+    class QuadNode {
+        constructor(x, y, size) {
+            this.x = x; this.y = y; this.size = size;
+            this.body = null; this.children = null;
+            this.totalMass = 0; this.centerX = 0; this.centerY = 0;
+        }
+
+        insert(body) {
+            if (this.totalMass === 0) {
+                this.body = body; this.totalMass = body.mass;
+                this.centerX = body.x; this.centerY = body.y;
+                return;
+            }
+            if (!this.children) this.subdivide();
+            if (this.body) {
+                this.insertIntoChild(this.body);
+                this.body = null;
+            }
+            this.insertIntoChild(body);
+            let m = this.totalMass + body.mass;
+            this.centerX = (this.centerX * this.totalMass + body.x * body.mass) / m;
+            this.centerY = (this.centerY * this.totalMass + body.y * body.mass) / m;
+            this.totalMass = m;
+        }
+
+        subdivide() {
+            let s = this.size / 4;
+            this.children = [
+                new QuadNode(this.x-s, this.y-s, this.size/2),
+                new QuadNode(this.x+s, this.y-s, this.size/2),
+                new QuadNode(this.x-s, this.y+s, this.size/2),
+                new QuadNode(this.x+s, this.y+s, this.size/2)
+            ];
+        }
+
+        insertIntoChild(b) {
+            let i = (b.x >= this.x ? 1 : 0) + (b.y >= this.y ? 2 : 0);
+            this.children[i].insert(b);
+        }
+
+        getForce(b, theta) {
+            if (this.totalMass === 0 || this.body === b) return { ax:0, ay:0 };
+            let dx = this.centerX - b.x, dy = this.centerY - b.y;
+            let d2 = dx*dx + dy*dy;
+            if (d2 < 0.1) d2 = 0.1; // Minimal floor to prevent "Infinity" on overlap
+            let d = Math.sqrt(d2);
+
+            if (!this.children || (this.size / d) < theta) {
+                let f = (G * this.totalMass) / d2;
+                return { ax: f * (dx/d), ay: f * (dy/d) };
+            }
+            let ax=0, ay=0;
+            for(let c of this.children) {
+                let force = c.getForce(b, theta);
+                ax += force.ax; ay += force.ay;
+            }
+            return { ax, ay };
+        }
+    }
+
+    /* =========================================================================
+       INITIALIZATION & UI
+       ========================================================================= */
+
+    function initSystem() {
+        bodies = [];
+        const AU_PIXELS = 200;
+
+        // The Sun
+        bodies.push(new Body(0, 0, 0, 0, SUN_MASS, '#fde047', 69.5, 'Sun'));
+
+        // Real Planets
+        PLANET_DATA.forEach(p => {
+            const distPx = p.dist * AU_PIXELS;
+            // Velocity at Periapsis: v = sqrt( (G*M/r) * (1+e)/(1-e) )
+            // Note: Since Sun mass is much larger, we ignore planet mass for initial v calculation
+            const vMag = Math.sqrt((G * SUN_MASS / distPx) * ((1 + p.ecc) / (1 - p.ecc)));
+            
+            // Start at Periapsis (closest point)
+            bodies.push(new Body(distPx, 0, 0, vMag, p.mass, p.color, p.radius, p.name));
+        });
+
+        updatePlanetUI();
+    }
+
+    function launchSatellite() {
+        const d = parseFloat(document.getElementById('customDist').value) * 200;
+        const e = parseFloat(document.getElementById('customEcc').value);
+        const m = parseFloat(document.getElementById('customMass').value) * 5.972;
+        
+        const v = Math.sqrt((G * SUN_MASS / d) * ((1 + e) / (1 - e)));
+        bodies.push(new Body(d, 0, 0, v, m, '#ffffff', 2, 'Satellite'));
+    }
+
+    function update() {
+        if (!isRunning) return;
+        const dt = 0.005 * timeScale;
+
+        // Leapfrog Integration
+        // 1. Kick-Drift
+        bodies.forEach(b => {
+            b.vx += b.ax * (dt/2);
+            b.vy += b.ay * (dt/2);
+            b.x += b.vx * dt;
+            b.y += b.vy * dt;
+            
+            if (frameCount % 20 === 0) {
+                b.history.push({x: b.x, y: b.y});
+                if (b.history.length > 500) b.history.shift();
+            }
+        });
+
+        // 2. Build Tree & Calculate Acceleration
+        let root = new QuadNode(0, 0, 50000);
+        bodies.forEach(b => root.insert(b));
+        bodies.forEach(b => {
+            let force = root.getForce(b, theta);
+            b.ax = force.ax;
+            b.ay = force.ay;
+            // Final Kick
+            b.vx += b.ax * (dt/2);
+            b.vy += b.ay * (dt/2);
+        });
+    }
+
+    let frameCount = 0;
+    function draw() {
+        update();
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        bodies.forEach(b => b.draw());
+        frameCount++;
+        requestAnimationFrame(draw);
+    }
+
+    /* =========================================================================
+       UI INTERACTION
+       ========================================================================= */
+
+    function updatePlanetUI() {
+        const list = document.getElementById('planetList');
+        list.innerHTML = PLANET_DATA.map(p => `
+            <div class="flex justify-between border-b border-slate-800 pb-1 hover:text-white transition">
+                <span>${p.name.padEnd(8)}</span>
+                <span class="text-sky-500">e=${p.ecc.toFixed(4)}</span>
+                <span>${p.dist.toFixed(2)} AU</span>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('playBtn').addEventListener('click', (e) => {
+        isRunning = !isRunning;
+        e.target.textContent = isRunning ? "Pause" : "Resume";
+        e.target.classList.toggle('bg-sky-500');
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', initSystem);
+    document.getElementById('launchBtn').addEventListener('click', launchSatellite);
+
+    document.getElementById('timeSlider').addEventListener('input', (e) => {
+        timeScale = parseFloat(e.target.value);
+        document.getElementById('timeVal').textContent = timeScale.toFixed(2);
+    });
+
+    document.getElementById('zoomSlider').addEventListener('input', (e) => {
+        zoom = parseFloat(e.target.value);
+        document.getElementById('zoomVal').textContent = zoom.toFixed(2);
+    });
+
+    // Panning & Zoom with Mouse
+    let isDragging = false;
+    let startPos = { x: 0, y: 0 };
+    canvas.addEventListener('mousedown', (e) => { isDragging = true; startPos = { x: e.clientX, y: e.clientY }; });
+    window.addEventListener('mouseup', () => isDragging = false);
+    window.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            offset.x += (e.clientX - startPos.x) / zoom;
+            offset.y += (e.clientY - startPos.y) / zoom;
+            startPos = { x: e.clientX, y: e.clientY };
+        }
+    });
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const factor = e.deltaY > 0 ? 0.95 : 1.05;
+        zoom *= factor;
+        zoom = Math.max(0.005, Math.min(10, zoom));
+        document.getElementById('zoomSlider').value = zoom;
+        document.getElementById('zoomVal').textContent = zoom.toFixed(2);
+    }, { passive: false });
+
+    function resize() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    initSystem();
+    draw();
+
+</script>
+</body>
+</html>

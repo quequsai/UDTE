@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Numerical Insights | UDTE Docs</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+    *, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #00000f; color: #94a3b8; font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.75; padding-top: 40px; }
+    nav { position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.97);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em; }
+    nav a { text-decoration:none; font-weight:700; color:#94a3b8; }
+    nav a.active { color:#38bdf8; }
+    nav .sep { color:#0f2744; }
+    article { max-width: 780px; margin: 0 auto; padding: 60px 28px 100px; }
+    .doc-header { margin-bottom: 48px; padding-bottom: 28px; border-bottom: 1px solid #0f2744; }
+    .doc-header .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .2em; color: #38bdf8; text-transform: uppercase; margin-bottom: 12px; }
+    .doc-header h1 { font-size: 1.7rem; font-weight: 700; color: #f1f5f9; line-height: 1.25; }
+    h2 { font-size: 1.2rem; font-weight: 700; color: #e2e8f0; margin-top: 52px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #0f2744; }
+    h3 { font-size: 1rem; font-weight: 600; color: #7dd3fc; margin-top: 28px; margin-bottom: 10px; }
+    p { margin-bottom: 16px; color: #94a3b8; }
+    hr { border: none; border-top: 1px solid #0f2744; margin: 36px 0; }
+    strong { color: #e2e8f0; font-weight: 600; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #0a1628; color: #7dd3fc; padding: 2px 6px; border-radius: 4px; }
+    pre { background: #060d1a; border: 1px solid #0f2744; border-radius: 8px; padding: 18px 20px; overflow-x: auto; margin: 18px 0 22px; }
+    pre code { background: none; padding: 0; font-size: 13px; line-height: 1.6; color: #7dd3fc; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+    th { background: #060d1a; color: #e2e8f0; font-weight: 600; padding: 10px 14px; text-align: left; border: 1px solid #0f2744; }
+    td { padding: 9px 14px; border: 1px solid #0f2744; color: #94a3b8; }
+    td:nth-child(2), td:nth-child(3) { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .back { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #475569; text-decoration: none; margin-bottom: 32px; letter-spacing: .06em; }
+    .back:hover { color: #38bdf8; }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="../../">UDTE</a>
+  <span class="sep">|</span>
+  <a href="../../sun-venus/">SUN-VENUS</a>
+  <a href="../../n-body/">N-BODY</a>
+  <a href="../../barnes-hut/">BARNES-HUT</a>
+  <a href="../../report/">REPORT</a>
+  <a href="../../docs/" class="active">DOCS</a>
+</nav>
+<article>
+  <a class="back" href="../">&larr; DOCS</a>
+  <div class="doc-header">
+    <div class="label">Sun-Venus Simulation</div>
+    <h1>Numerical Insights: Integration, Drift, and Timestep Trade-offs</h1>
+  </div>
+
+  <p>This document covers three topics that came out of analysing the Sun-Venus simulation:</p>
+  <p>1. <strong>How Venus's position is actually calculated</strong> — step by step from browser frame to orbital mechanics<br>
+  2. <strong>What "Kepler drift" and "Horizons drift" measure</strong> — and why they are fundamentally different things<br>
+  3. <strong>What happens when you change the substep size</strong> — accuracy vs performance trade-off table and reasoning</p>
+
+  <hr>
+
+  <h2>1. How Venus's Position Is Updated Each Frame</h2>
+  <p>There are four distinct layers between a browser animation frame and a new planetary position. Understanding each layer is what allows the Python drift analysis script to reproduce the simulation results exactly.</p>
+
+  <h3>Layer 1 — loop(now) — frame-rate dependent</h3>
+  <pre><code>const realDt = Math.min((now - lastRAF) / 1000, 0.1);  // real seconds since last frame
+const simDt  = realDt * REAL_TO_SIM * timeWarp;         // convert to sim-seconds
+advanceSim(simDt);</code></pre>
+  <p>At 60 fps with Warp 1x: <code>realDt ≈ 0.0167 s → simDt ≈ 10,080 sim-seconds (~2.8 sim-hours)</code>.</p>
+  <p><strong>The frame rate does not affect physics accuracy.</strong> It only controls how many substeps are batched per render call. A slow machine that renders at 10 fps still runs the same physics as a 120 fps machine — it just runs more substeps per frame.</p>
+
+  <h3>Layer 2 — advanceSim(totalDt) — substep batching</h3>
+  <pre><code>const steps = Math.ceil(totalDt / DT_SUB);   // DT_SUB = 3600 s
+const dt    = totalDt / steps;                // always ≤ 3600 s per substep</code></pre>
+  <p>This is the accuracy-controlling layer. Regardless of frame rate, time warp, or how much sim-time has accumulated, each individual physics step is at most 3600 sim-seconds (1 sim-hour). At Warp 50x, one frame advances ~500,000 sim-seconds, which becomes ~139 substeps of equal size.</p>
+
+  <h3>Layer 3 — Kick-Drift-Kick Leapfrog (per substep)</h3>
+  <pre><code>A.  v += a · (dt/2)          ← half-kick: velocity update with current acceleration
+B.  x += v · dt              ← full drift: position update with new velocity
+    simTime += dt
+    record position to history buffer if interval elapsed
+C.  computeForces()          ← recompute acceleration at the new position
+D.  v += a · (dt/2)          ← second half-kick with new acceleration</code></pre>
+  <p><strong>Why leapfrog and not Euler?</strong> Euler integration does not conserve energy — orbits spiral outward or collapse over timescales of years. The leapfrog is symplectic: it conserves a slightly modified total energy exactly, so orbits remain bounded over arbitrarily long timescales. The only accumulating error is a slow phase drift (the orbit period is slightly wrong), not an amplitude drift (the orbit size stays correct).</p>
+
+  <h3>Layer 4 — computeForces() — light-delayed gravity</h3>
+  <pre><code>d0         = |r_Venus − r_Sun|      ← current separation (~108 million km for Venus)
+lightDelay = d0 / c                  ← ~360 seconds (6 minutes)
+t_ret      = simTime − lightDelay   ← when the signal left the Sun
+
+sPast      = posHist interpolated at t_ret   ← Sun's position 360 s ago
+
+F_on_Venus = G · M_Sun / |r_Venus − sPast|²  ← Newton's law with retarded source
+             directed toward sPast</code></pre>
+  <p>The position history buffer stores one entry every <code>HIST_INTERVAL = 3600 s</code> of sim time, keeping the last <code>MAX_HIST_DURATION = 7200 s</code>. The retarded time lookup is a binary search with linear interpolation.</p>
+  <p><strong>Summary.</strong> Venus's position at any moment is the result of pure numerical integration starting from the Horizons or J2000 initial state vectors. There is no orbit equation. The ellipse emerges from Newton's law — applied to the retarded gravitational field — iterated one hour at a time.</p>
+
+  <hr>
+
+  <h2>2. Venus's Orbit: Elliptical, Not Circular</h2>
+  <p>The orbit is <strong>genuinely elliptical</strong> (eccentricity e ≈ 0.0067). It looks nearly circular because Venus has one of the most circular orbits in the solar system, but the simulation does not hardcode a circle anywhere.</p>
+  <p>The J2000 built-in initial conditions are derived from <code>e = 0.00677323</code> (IAU mean elements). The Kepler propagator explicitly computes the eccentricity vector from the initial state and propagates along the correct conic section. The leapfrog integrator produces whatever orbit shape naturally follows from Newton's law applied to the initial position and velocity.</p>
+
+  <hr>
+
+  <h2>3. Kepler Drift vs Horizons Drift — Two Different Things</h2>
+  <p>The simulation's Reference Ephemeris panel shows two drift values. They measure completely different sources of error. Conflating them leads to wrong conclusions about the simulation's accuracy.</p>
+
+  <h3>Kepler drift</h3>
+  <p><strong>Definition:</strong> Distance between Venus's simulated position and where a perfect 2-body Newtonian simulation would put it, given the same starting conditions.</p>
+  <p><strong>Source:</strong> The light-delayed gravity perturbation. When gravity travels at <code>c</code> rather than instantaneously, the force direction is slightly off from the current Sun-Venus line. Over many orbits, this introduces a slow precessional drift relative to the ideal Keplerian ellipse. The leapfrog's finite-timestep phase error also contributes.</p>
+  <p><strong>Sensitive to substep size:</strong> Yes. Smaller substeps give less integration error and smaller Kepler drift. This is the metric that changes meaningfully between dt = 100 s and dt = 20,000 s.</p>
+
+  <h3>Horizons drift</h3>
+  <p><strong>Definition:</strong> Distance between Venus's simulated position and where JPL Horizons says Venus actually is on that date.</p>
+  <p><strong>Source:</strong> Primarily the <strong>missing planetary perturbations</strong>. The simulation models only the Sun and Venus. Jupiter exerts a gravitational acceleration on Venus of roughly <code>G × M_Jupiter / r² ≈ 2×10⁻⁸ km/s²</code> — tiny per second, but accumulating continuously. Saturn, Earth, Mercury, and Mars also contribute. After decades, the orbit phase drifts measurably relative to where Venus actually is.</p>
+  <p><strong>Not sensitive to substep size:</strong> The Horizons drift curve looks essentially identical whether you run at dt = 100 s or dt = 20,000 s, because the missing-perturbation error is orders of magnitude larger than the integration error at any reasonable substep size.</p>
+
+  <h3>Summary</h3>
+  <table>
+    <tr><th>Source of error</th><th>Kepler drift</th><th>Horizons drift</th></tr>
+    <tr><td>Light-delayed gravity</td><td>✓ primary</td><td>✓ minor</td></tr>
+    <tr><td>Leapfrog integration phase error</td><td>✓ secondary</td><td>✗ negligible</td></tr>
+    <tr><td>Missing planetary perturbations</td><td>✗ absent</td><td>✓ dominant</td></tr>
+  </table>
+  <p>This asymmetry is why the drift analysis uses both metrics: the Horizons drift shows the hard physical limitation of the 2-body model, while the Kepler drift reveals the numerical precision of the integration itself.</p>
+
+  <hr>
+
+  <h2>4. Substep Size Trade-offs</h2>
+  <p>The default substep is <code>DT_SUB = 3600 s</code> (1 sim-hour). The drift analysis script benchmarks six values: 100, 1000, 3600, 7200, 14000, and 20,000 seconds.</p>
+  <p>The leapfrog's per-orbit phase error scales as O(dt²). For Venus's 224.7-day orbital period:</p>
+  <pre><code>T_Venus = 224.7 days = 19,414,080 s
+
+dt =   100 s  →  dt/T = 1/194,141   ← sub-km error per orbit, negligible
+dt =  1000 s  →  dt/T = 1/19,414    ← very small
+dt =  3600 s  →  dt/T = 1/5,393     ← default; small, well-characterised
+dt =  7200 s  →  dt/T = 1/2,696     ← 4× more error than default
+dt = 14000 s  →  dt/T = 1/1,387     ← measurable Kepler drift over decades
+dt = 20000 s  →  dt/T = 1/971       ← significant Kepler drift</code></pre>
+
+  <table>
+    <tr><th>dt (s)</th><th>Steps / 200 yr</th><th>Est. runtime</th><th>Kepler drift at 200 yr</th><th>Horizons drift</th></tr>
+    <tr><td>100</td><td>63.1 M</td><td>5–10 min</td><td>minimal (~sub-km)</td><td>same as all others</td></tr>
+    <tr><td>1,000</td><td>18.9 M</td><td>1–3 min</td><td>very small</td><td>same</td></tr>
+    <tr><td>3,600</td><td>1.75 M</td><td>60–90 s</td><td>small (default)</td><td>same</td></tr>
+    <tr><td>7,200</td><td>875 K</td><td>30–45 s</td><td>noticeable</td><td>same</td></tr>
+    <tr><td>14,000</td><td>450 K</td><td>15–25 s</td><td>measurable</td><td>same</td></tr>
+    <tr><td>20,000</td><td>315 K</td><td>10–15 s</td><td>significant</td><td>same</td></tr>
+  </table>
+  <p><strong>Keep dt = 3600 s</strong> for general use. It provides ~1.75 million steps, Kepler drift that genuinely reflects the light-delay physics, and position-history entries spaced tightly enough (3600 s) to accurately resolve the 360 s light delay.</p>
+
+  <hr>
+
+  <h2>5. Parallelisation vs Larger dt — Big-O</h2>
+  <p>The leapfrog is <strong>inherently serial</strong> — step N depends on step N-1's positions and velocities. You cannot compute step 1000 without first computing steps 1–999. For a single run, increasing dt by a factor k gives O(1/k) speedup with no parallelisation alternative that preserves accuracy.</p>
+  <p>When running N simulations at different dt values — as in the drift analysis — each run is completely independent. This is <strong>embarrassingly parallel</strong>: no communication, no coordination. Running all N simultaneously on N cores gives O(1/N) wall time.</p>
+  <pre><code>Larger dt          →  O(1/k) speedup  but  accuracy cost per run  (Kepler drift increases)
+Parallelisation    →  O(1/P) speedup  and  no accuracy cost        (each run uses its own dt)</code></pre>
+  <p>They are big-O equivalent only when comparing "one coarse run" against "P parallel fine runs". For independent multi-run benchmarks, parallelisation wins because it preserves accuracy while reducing wall time.</p>
+
+  <hr>
+
+  <h2>6. Why the Drift Analysis Uses Python, Not the Browser Simulation</h2>
+  <p>The browser simulation is unsuitable for long-baseline logging: the NASA API requires a CORS proxy, there is no mechanism to export drift data to a file from JavaScript in a browser tab, and the browser cannot run a 200-year simulation without user interaction to keep it alive.</p>
+  <p>The Python script reproduces the JS physics numerically exactly because all physical constants are identical, the coordinate transform uses the same obliquity and rotation formula, the leapfrog algorithm is the same kick-drift-kick sequence, and the Horizons API is called with the same parameters.</p>
+
+</article>
+</body>
+</html>
