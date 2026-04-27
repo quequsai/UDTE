@@ -84,9 +84,11 @@ function icrfToEcliptic(v) {
    ══════════════════════════════════════════════════════════════════════ */
 const _HORIZONS_DIRECT = 'https://ssd.jpl.nasa.gov/api/horizons.api';
 const _isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-const HORIZONS = _isLocal
-    ? 'http://localhost:8010/proxy/api/horizons.api'
-    : `https://corsproxy.io/?${_HORIZONS_DIRECT}`;
+
+function buildHorizonsUrl(params) {
+    if (_isLocal) return `http://localhost:8010/proxy/api/horizons.api?${params}`;
+    return `https://api.allorigins.win/raw?url=${encodeURIComponent(`${_HORIZONS_DIRECT}?${params}`)}`;
+}
 
 const HORIZONS_MIN_DATE = '1900-01-01';
 const HORIZONS_MAX_DATE = '2100-12-31';
@@ -114,7 +116,7 @@ async function horizonsVec(command, epochDate) {
         REF_SYSTEM:  'J2000'
     });
 
-    const r = await fetch(`${HORIZONS}?${params}`);
+    const r = await fetch(buildHorizonsUrl(params));
     if (!r.ok) throw new Error(`HTTP ${r.status} for ${command}`);
     const j = await r.json();
     if (!j.result) throw new Error(`No result for ${command}`);
@@ -179,7 +181,7 @@ async function horizonsVecRangeAll(command, startDate, stopDate) {
         VEC_TABLE:  '2',    OUT_UNITS:  'KM-S',       CSV_FORMAT:'NO',
         REF_PLANE:  'ECLIPTIC', REF_SYSTEM:'J2000'
     });
-    const r = await fetch(`${HORIZONS}?${params}`);
+    const r = await fetch(buildHorizonsUrl(params));
     if (!r.ok) throw new Error(`HTTP ${r.status} for ${command}`);
     const j = await r.json();
     if (!j.result) throw new Error(`No result for ${command}`);
