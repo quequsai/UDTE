@@ -64,7 +64,11 @@ function icrfToEcliptic(v) {
 /* ══════════════════════════════════════════════════════════════════════
    NASA JPL HORIZONS  (text-format, CENTER = 500@0 = SSB)
    ══════════════════════════════════════════════════════════════════════ */
-const HORIZONS = 'http://localhost:8010/proxy/api/horizons.api';
+const _HORIZONS_DIRECT = 'https://ssd.jpl.nasa.gov/api/horizons.api';
+const _isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const HORIZONS = _isLocal
+    ? 'http://localhost:8010/proxy/api/horizons.api'
+    : `https://corsproxy.io/?${_HORIZONS_DIRECT}`;
 
 // Horizons date range for batch prefetch
 const HORIZONS_MIN_DATE = '1900-01-01';
@@ -481,7 +485,7 @@ function updateReferenceTelemetry() {
         idle:          '',
         fetching:      '<div class="text-[9px] text-yellow-400 animate-pulse mb-1">Fetching Horizons daily data…</div>',
         ok:            `<div class="text-[9px] text-emerald-500 mb-1">Horizons cache: ${horizonsDailyCache.size} days · ${today}</div>`,
-        error:         '<div class="text-[9px] text-red-400 mb-1">Horizons fetch failed — CORS proxy needed (localhost:8010)</div>',
+        error:         '<div class="text-[9px] text-red-400 mb-1">Horizons fetch failed — JPL may be rate-limiting, try again shortly</div>',
         'out-of-range':'<div class="text-[9px] text-slate-600 mb-1">Sim date outside Horizons range (1900–2100)</div>'
     };
 
