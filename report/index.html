@@ -26,13 +26,16 @@
       padding: 0 20px; height: 40px;
       display: flex; align-items: center; gap: 32px;
       font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .08em;
+      overflow-x: auto;
     }
+    nav > * { flex-shrink: 0; }
     nav a { text-decoration: none; font-weight: 700; }
     nav .home { color: #94a3b8; }
     nav .sep { color: #0f2744; }
     nav .sun-venus { color: #94a3b8; }
     nav .n-body { color: #94a3b8; }
     nav .report { color: #38bdf8; }
+    @media (max-width: 640px) { nav { gap: 16px; padding: 0 12px; } article { padding: 60px 16px 80px; } table { display: block; overflow-x: auto; } img { max-width: 100%; height: auto; } pre { font-size: 12px; } }
 
     /* ── layout ── */
     article {

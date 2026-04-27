@@ -8,7 +8,9 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
     *, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; min-height: 100%; background: #00000f; color: #94a3b8; font-family: 'Inter', sans-serif; }
-    nav { position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.97);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em; }
+    nav { position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.97);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em;overflow-x:auto; }
+    nav > * { flex-shrink: 0; }
+    @media (max-width: 640px) { nav { gap: 16px; padding: 0 12px; } .page { padding: 60px 16px 60px; } }
     nav a { text-decoration:none; font-weight:700; color:#94a3b8; }
     nav a.active { color:#38bdf8; }
     nav .sep { color:#0f2744; }

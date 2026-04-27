@@ -22,8 +22,10 @@
 
 <div class="app" style="padding-top:40px;">
 
+<button class="sidebar-toggle" id="sidebarToggle">&#9776; SHOW CONTROLS</button>
+
 <!-- ════════════════════════════ SIDEBAR ════════════════════════════ -->
-<aside class="p-5 gap-4 flex flex-col sc">
+<aside class="p-5 gap-4 flex flex-col sc" id="sidebar">
 
     <header>
         <h1 class="text-lg font-black tracking-tight text-white">SUN–VENUS ENGINE</h1>
@@ -240,5 +242,17 @@
 </div>
 
 <script src="simulation.js"></script>
+<script>
+  (function(){
+    var btn = document.getElementById('sidebarToggle');
+    var sb  = document.getElementById('sidebar');
+    if (btn && sb) {
+      btn.addEventListener('click', function() {
+        sb.classList.toggle('open');
+        btn.innerHTML = sb.classList.contains('open') ? '&#10005; HIDE CONTROLS' : '&#9776; SHOW CONTROLS';
+      });
+    }
+  })();
+</script>
 </body>
 </html>
