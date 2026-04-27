@@ -69,7 +69,7 @@ const _isLocal = location.hostname === 'localhost' || location.hostname === '127
 
 function buildHorizonsUrl(params) {
     if (_isLocal) return `http://localhost:8010/proxy/api/horizons.api?${params}`;
-    return `https://api.allorigins.win/raw?url=${encodeURIComponent(`${_HORIZONS_DIRECT}?${params}`)}`;
+    return `https://udte.quequsai.workers.dev?${params}`;
 }
 
 // Horizons date range for batch prefetch
