@@ -2,19 +2,19 @@
 
 CPSC 4990 Independent Study — Qusai Quresh, University of Lethbridge, April 2026
 
-Live site: **https://quequsai.github.io/udte/**
+Live site: **https://quequsai.github.io/UDTE/**
 
 ---
 
 ## What's here
 
-**[Sun-Venus Simulation](https://quequsai.github.io/udte/sun-venus/)**
+**[Sun-Venus Simulation](https://quequsai.github.io/UDTE/sun-venus/)**
 Two-body orbital simulation of the Sun and Venus. Uses a symplectic leapfrog integrator, light-delayed gravity, and real initial conditions from the NASA JPL Horizons API. Compares against the analytic Kepler solution in real time.
 
-**[N-Body Solar System](https://quequsai.github.io/udte/n-body/)**
+**[N-Body Solar System](https://quequsai.github.io/UDTE/n-body/)**
 Ten-body solar system simulation (Sun through Pluto) built on the same physics engine. Every body gravitationally influences every other body, with light-delayed gravity throughout.
 
-**[Final Report](https://quequsai.github.io/udte/report/)**
+**[Final Report](https://quequsai.github.io/UDTE/report/)**
 Full write-up covering the drift analysis methodology, Monte Carlo stability testing across six timestep configurations (dt = 100 s to 20,000 s), and what building this from scratch taught me about the intersection of CS, physics, and mathematical incompleteness.
 
 ---
