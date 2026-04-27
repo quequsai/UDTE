@@ -54,6 +54,14 @@
         .btn-primary:hover { background: #38bdf8; transform: translateY(-1px); }
 
         canvas { cursor: move; touch-action: none; }
+
+        @media (max-width: 768px) {
+            body { overflow: auto; }
+            aside { max-height: 42vh !important; overflow-y: auto; }
+            main { min-height: 52vw; flex: 1; }
+            nav { overflow-x: auto; gap: 16px !important; padding: 0 12px !important; }
+            nav > * { flex-shrink: 0; }
+        }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col md:flex-row" style="padding-top:40px;">

@@ -192,6 +192,10 @@ let timeWarp   = 1.0;
 // zoom: pixels per km  (default shows ~2 AU across a ~1000px canvas)
 let zoom       = 4e-9;      // kept for scale-bar calculation
 let camera     = { x:0, y:0 }; // unused in 3D mode; kept for reset compat
+// Camera tracking
+let camTarget  = { x:0, y:0, z:0 }; // world point the camera orbits
+let trackedBody = null;              // body being followed (null = origin)
+let lastFetchTime = null;
 // 3D orbit camera
 let cam = { r: 2.5e8, theta: Math.PI/4, phi: Math.PI/5, fov: 800 };
 let lastCollision = false;
@@ -738,6 +742,7 @@ const STARS = (() => {
    project(wx,wy,wz) → { sx, sy, depth } in screen space.
    ══════════════════════════════════════════════════════════════════════ */
 function project(wx, wy, wz) {
+    wx -= camTarget.x; wy -= camTarget.y; wz -= camTarget.z;
     const W = canvas.width, H = canvas.height;
     const cT = Math.cos(cam.theta), sT = Math.sin(cam.theta);
     const cP = Math.cos(cam.phi),   sP = Math.sin(cam.phi);
@@ -764,6 +769,7 @@ function project(wx, wy, wz) {
 }
 
 function render() {
+    if (trackedBody) { camTarget.x = trackedBody.x; camTarget.y = trackedBody.y; camTarget.z = trackedBody.z; }
     const W = canvas.width, H = canvas.height;
 
     ctx.fillStyle = '#00000f';
@@ -848,6 +854,16 @@ function render() {
     zoom = cam.fov / cam.r;      // keep zoom in sync for any legacy code
     document.getElementById('scaleLabel').textContent =
         barAU >= 0.01 ? barAU.toFixed(2) + ' AU' : (barKm / 1e6).toFixed(2) + ' M km';
+
+    // Tracking label
+    if (trackedBody) {
+        ctx.font = 'bold 11px JetBrains Mono, monospace';
+        ctx.fillStyle = trackedBody.color;
+        ctx.fillText('⦿ TRACKING: ' + trackedBody.name.toUpperCase(), 12, H - 28);
+        ctx.font = '10px JetBrains Mono, monospace';
+        ctx.fillStyle = 'rgba(148,163,184,0.6)';
+        ctx.fillText('tap body again to release', 12, H - 14);
+    }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -892,6 +908,8 @@ document.getElementById('fetchBtn').onclick = async () => {
         msgEl.textContent = `Loaded Sun + Venus for ${epoch}.`;
         dotEl.className   = 'w-2 h-2 rounded-full bg-emerald-400';
         document.getElementById('hudSrc').textContent = `Horizons (${epoch})`;
+        lastFetchTime = new Date();
+        document.getElementById('hudUpdated').textContent = lastFetchTime.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
         epochCalendarDate = new Date(epoch + 'T00:00:00Z');
         initBodies(sunData, venusData);
     } catch (err) {
@@ -963,6 +981,70 @@ window.onmousemove = (e) => {
 };
 window.onmouseup = () => { drag = false; canvas.style.cursor = 'crosshair'; };
 canvas.onwheel = (e) => { e.preventDefault(); setCamR(e.deltaY > 0 ? cam.r * 1.15 : cam.r * 0.87); };
+
+// Touch controls — 1 finger: orbit | 2 finger pinch: zoom | 2 finger drag: orbit | tap: track body
+(function() {
+    let _t = {}, _pinch = null, _tap = null;
+
+    canvas.addEventListener('touchstart', e => {
+        e.preventDefault();
+        _t = {};
+        for (const t of e.touches) _t[t.identifier] = { x: t.clientX, y: t.clientY };
+        _pinch = null;
+        _tap = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() } : null;
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+        e.preventDefault();
+        const ts = Array.from(e.touches);
+        if (ts.length === 1) {
+            const t = ts[0], prev = _t[t.identifier];
+            if (prev) {
+                cam.theta -= (t.clientX - prev.x) * 0.005;
+                cam.phi = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, cam.phi + (t.clientY - prev.y) * 0.005));
+            }
+            _pinch = null;
+        } else if (ts.length === 2) {
+            const [a, b] = ts;
+            const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+            if (_pinch !== null) setCamR(cam.r * (_pinch / dist));
+            _pinch = dist;
+            const pa = _t[a.identifier], pb = _t[b.identifier];
+            if (pa && pb) {
+                const dx = (a.clientX + b.clientX) / 2 - (pa.x + pb.x) / 2;
+                const dy = (a.clientY + b.clientY) / 2 - (pa.y + pb.y) / 2;
+                cam.theta -= dx * 0.003;
+                cam.phi = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, cam.phi + dy * 0.003));
+            }
+            _tap = null;
+        }
+        for (const t of ts) _t[t.identifier] = { x: t.clientX, y: t.clientY };
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+        if (_tap && e.changedTouches.length === 1) {
+            const t = e.changedTouches[0];
+            if (Math.hypot(t.clientX - _tap.x, t.clientY - _tap.y) < 10 && Date.now() - _tap.time < 300) {
+                const rect = canvas.getBoundingClientRect();
+                const tx = t.clientX - rect.left, ty = t.clientY - rect.top;
+                let closest = null, minD = 60;
+                for (const b of Object.values(bodies)) {
+                    const p = project(b.x, b.y, b.z);
+                    if (!p.visible) continue;
+                    const d = Math.hypot(tx - p.sx, ty - p.sy);
+                    if (d < minD) { minD = d; closest = b; }
+                }
+                if (closest && trackedBody !== closest) {
+                    trackedBody = closest;
+                } else {
+                    trackedBody = null;
+                    camTarget = { x: 0, y: 0, z: 0 };
+                }
+            }
+        }
+        _t = {}; _pinch = null; _tap = null;
+    }, { passive: false });
+})();
 
 // Resize
 function resize() { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; }
