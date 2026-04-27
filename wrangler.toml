@@ -1,3 +1,8 @@
 name = "udte"
 main = "worker.js"
 compatibility_date = "2025-01-01"
+
+[observability]
+[observability.logs]
+enabled = false
+invocation_logs = true
