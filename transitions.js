@@ -61,7 +61,7 @@
     var ctx = cvs.getContext('2d');
 
     var particles = [];
-    var DURATION = 900;
+    var DURATION = 700;
     var start = null;
     var lastSpawn = 0;
 
@@ -83,7 +83,11 @@
       }
 
       if (t < 1) requestAnimationFrame(frame);
-      else window.location.href = destUrl;
+      else if ('startViewTransition' in document) {
+        document.startViewTransition(function () { window.location.href = destUrl; });
+      } else {
+        window.location.href = destUrl;
+      }
     }
 
     requestAnimationFrame(frame);
@@ -124,13 +128,17 @@
     requestAnimationFrame(frame);
   }
 
-  /* ── CSS keyframes for non-warp transitions ── */
+  /* ── CSS keyframes for non-warp transitions + View Transitions API ── */
   var CSS = [
     '@keyframes enter-doc  { from{background:rgba(2,6,23,.97);transform:translateY(0)} to{background:rgba(2,6,23,.97);transform:translateY(100%)} }',
     '@keyframes exit-to-doc   { from{background:rgba(2,6,23,.97);transform:translateY(-100%)} to{background:rgba(2,6,23,.97);transform:translateY(0)} }',
     '@keyframes exit-slide-r  { from{background:#000;transform:translateX(100%)} to{background:#000;transform:translateX(0)} }',
     '@keyframes exit-slide-l  { from{background:#000;transform:translateX(-100%)} to{background:#000;transform:translateX(0)} }',
     '@keyframes exit-default  { from{background:#000;opacity:0} to{background:#000;opacity:1} }',
+    '@keyframes vt-depart { to   { opacity:0; transform:scale(0.96); filter:blur(3px); } }',
+    '@keyframes vt-arrive { from { opacity:0; transform:scale(1.04); filter:blur(3px); } }',
+    '::view-transition-old(root) { animation: 320ms ease-in  vt-depart; }',
+    '::view-transition-new(root) { animation: 320ms ease-out vt-arrive; }',
   ].join('\n');
 
   var styleEl = document.createElement('style');
