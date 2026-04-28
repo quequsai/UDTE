@@ -144,16 +144,40 @@
       letter-spacing: .08em;
     }
 
-    /* ── theme toggle ── */
-    #theme-btn {
-      position: fixed; top: 12px; right: 12px; z-index: 9998;
-      width: 32px; height: 32px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(2,6,23,0.8); color: #38bdf8;
-      font-size: 16px; cursor: pointer;
+    /* ── sky toggle (moon/sun) ── */
+    #sky-body {
+      width: 36px; height: 36px;
+      cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(8px); transition: background .2s, color .2s;
+      flex-shrink: 0;
     }
+    #sky-moon {
+      width: 24px; height: 24px;
+      background: #eef;
+      border-radius: 50%;
+      position: relative;
+      transition: background 1s ease, box-shadow 1s ease;
+    }
+    [data-theme="light"] #sky-moon {
+      background: #F6D602;
+      box-shadow: 0 0 14px 5px rgba(246,214,2,0.45), 0 0 5px 2px rgba(245,235,113,0.6);
+    }
+    .moon-spot {
+      border-radius: 50%; position: absolute;
+      background: #ccd; transition: all 1s ease;
+    }
+    [data-theme="light"] .moon-spot { width: 0 !important; height: 0 !important; opacity: 0; }
+    #moon-spot1 { width: 5px; height: 5px; top: 14px; left: 4px; }
+    #moon-spot2 { width: 3px; height: 3px; top: 15px; left: 11px; }
+    #moon-cover {
+      width: 20px; height: 20px;
+      background: #00000f;
+      border-radius: 50%;
+      position: absolute;
+      top: -3px; left: 9px;
+      transition: transform 1s ease, opacity 1s ease;
+    }
+    [data-theme="light"] #moon-cover { transform: translateX(30px); opacity: 0; }
 
     @media (max-width: 600px) {
       .page { padding: 40px 16px 60px; }
@@ -168,6 +192,14 @@
   <a href="https://quequsai.github.io/" style="color:#94a3b8;text-decoration:none;font-weight:700;">QUSAI QURESH</a>
   <span style="color:#0f2744;">|</span>
   <a href="./" style="color:#38bdf8;text-decoration:none;font-weight:700;">UDTE</a>
+  <div style="flex:1"></div>
+  <div id="sky-body" title="Toggle light / dark">
+    <div id="sky-moon">
+      <div class="moon-spot" id="moon-spot1"></div>
+      <div class="moon-spot" id="moon-spot2"></div>
+      <div id="moon-cover"></div>
+    </div>
+  </div>
 </nav>
 
 <canvas id="stars"></canvas>
@@ -224,8 +256,6 @@
 
 <footer>UDTE &nbsp;·&nbsp; UNIVERSAL DIGITAL TWIN ENGINE &nbsp;·&nbsp; QUSAI QURESH 2026</footer>
 
-<button id="theme-btn" title="Toggle light/dark">◐</button>
-
 <script>
   // deterministic star field matching the simulation aesthetic
   const canvas = document.getElementById('stars');
@@ -261,20 +291,17 @@
 </script>
 <script>
   (function(){
-    const root = document.documentElement;
-    const btn = document.getElementById('theme-btn');
-    const saved = localStorage.getItem('theme-udte');
-    const systemLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-    const apply = (light) => {
+    var root  = document.documentElement;
+    var saved = localStorage.getItem('theme-udte');
+    var apply = function(light) {
       root.setAttribute('data-theme', light ? 'light' : 'dark');
-      btn.textContent = light ? '◑' : '◐';
-      btn.style.background = light ? 'rgba(248,250,252,0.9)' : 'rgba(2,6,23,0.8)';
-      btn.style.color = light ? '#0284c7' : '#38bdf8';
-      btn.style.borderColor = light ? '#e2e8f0' : 'rgba(255,255,255,0.1)';
       localStorage.setItem('theme-udte', light ? 'light' : 'dark');
     };
-    apply(saved ? saved === 'light' : systemLight);
-    btn.addEventListener('click', () => apply(root.getAttribute('data-theme') !== 'light'));
+    apply(saved ? saved === 'light' : window.matchMedia('(prefers-color-scheme: light)').matches);
+    window._applyTheme = apply;
+    document.getElementById('sky-body').addEventListener('click', function () {
+      apply(root.getAttribute('data-theme') !== 'light');
+    });
   })();
 </script>
 <script src="transitions.js"></script>
