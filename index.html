@@ -144,41 +144,6 @@
       letter-spacing: .08em;
     }
 
-    /* ── sky toggle (moon/sun) ── */
-    #sky-body {
-      width: 36px; height: 36px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    #sky-moon {
-      width: 24px; height: 24px;
-      background: #eef;
-      border-radius: 50%;
-      position: relative;
-      transition: background 1s ease, box-shadow 1s ease;
-    }
-    [data-theme="light"] #sky-moon {
-      background: #F6D602;
-      box-shadow: 0 0 14px 5px rgba(246,214,2,0.45), 0 0 5px 2px rgba(245,235,113,0.6);
-    }
-    .moon-spot {
-      border-radius: 50%; position: absolute;
-      background: #ccd; transition: all 1s ease;
-    }
-    [data-theme="light"] .moon-spot { width: 0 !important; height: 0 !important; opacity: 0; }
-    #moon-spot1 { width: 5px; height: 5px; top: 14px; left: 4px; }
-    #moon-spot2 { width: 3px; height: 3px; top: 15px; left: 11px; }
-    #moon-cover {
-      width: 20px; height: 20px;
-      background: #00000f;
-      border-radius: 50%;
-      position: absolute;
-      top: -3px; left: 9px;
-      transition: transform 1s ease, opacity 1s ease;
-    }
-    [data-theme="light"] #moon-cover { transform: translateX(30px); opacity: 0; }
-
     @media (max-width: 600px) {
       .page { padding: 40px 16px 60px; }
       .card { width: 100%; }
@@ -192,14 +157,6 @@
   <a href="https://quequsai.github.io/" style="color:#94a3b8;text-decoration:none;font-weight:700;">QUSAI QURESH</a>
   <span style="color:#0f2744;">|</span>
   <a href="./" style="color:#38bdf8;text-decoration:none;font-weight:700;">UDTE</a>
-  <div style="flex:1"></div>
-  <div id="sky-body" title="Toggle light / dark">
-    <div id="sky-moon">
-      <div class="moon-spot" id="moon-spot1"></div>
-      <div class="moon-spot" id="moon-spot2"></div>
-      <div id="moon-cover"></div>
-    </div>
-  </div>
 </nav>
 
 <canvas id="stars"></canvas>
@@ -290,19 +247,7 @@
   resize();
 </script>
 <script>
-  (function(){
-    var root  = document.documentElement;
-    var saved = localStorage.getItem('theme-udte');
-    var apply = function(light) {
-      root.setAttribute('data-theme', light ? 'light' : 'dark');
-      localStorage.setItem('theme-udte', light ? 'light' : 'dark');
-    };
-    apply(saved ? saved === 'light' : window.matchMedia('(prefers-color-scheme: light)').matches);
-    window._applyTheme = apply;
-    document.getElementById('sky-body').addEventListener('click', function () {
-      apply(root.getAttribute('data-theme') !== 'light');
-    });
-  })();
+  document.documentElement.setAttribute('data-theme', 'dark');
 </script>
 <script src="transitions.js"></script>
 </body>
