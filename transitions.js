@@ -50,6 +50,67 @@
     }
   });
 
+  /* ── Star-warp (eased): same streaking stars but speed follows sin bell-curve ── */
+  function playStarWarpEased(destUrl) {
+    var W = window.innerWidth, H = window.innerHeight;
+    var cvs = document.createElement('canvas');
+    cvs.className = 'tr-overlay';
+    cvs.width = W; cvs.height = H;
+    cvs.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;';
+    document.body.appendChild(cvs);
+    var ctx = cvs.getContext('2d');
+    var cx = W / 2, cy = H / 2;
+
+    var stars = [];
+    for (var i = 0; i < 140; i++) {
+      stars.push({ x: Math.random() * W, y: Math.random() * H });
+    }
+
+    var MAX_SPEED = 20;
+    var DURATION  = 1800;
+    var start     = null;
+
+    function frame(now) {
+      if (!start) start = now;
+      var t     = Math.min((now - start) / DURATION, 1);
+      var speed = MAX_SPEED * Math.sin(t * Math.PI);
+
+      ctx.fillStyle = 'rgba(0,0,12,' + (0.12 + Math.sin(t * Math.PI) * 0.55) + ')';
+      ctx.fillRect(0, 0, W, H);
+
+      for (var i = 0; i < stars.length; i++) {
+        var s     = stars[i];
+        var angle = Math.atan2(s.y - cy, s.x - cx);
+        s.x += speed * Math.cos(angle);
+        s.y += speed * Math.sin(angle);
+        if (s.x < 0 || s.x > W || s.y < 0 || s.y > H) {
+          s.x = cx + (Math.random() - 0.5) * W * 0.3;
+          s.y = cy + (Math.random() - 0.5) * H * 0.3;
+        }
+        var dist   = Math.sqrt((s.x - cx) * (s.x - cx) + (s.y - cy) * (s.y - cy));
+        var r      = 0.8 + 2.5 * dist / W;
+        var weight = Math.max(3, 80 - 70 * (speed / MAX_SPEED));
+        var pastX  = (weight * s.x + cx) / (weight + 1);
+        var pastY  = (weight * s.y + cy) / (weight + 1);
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(pastX, pastY);
+        ctx.strokeStyle = 'rgba(255,255,255,' + Math.min(1, 0.3 + speed / MAX_SPEED) + ')';
+        ctx.lineWidth   = r;
+        ctx.stroke();
+      }
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else if ('startViewTransition' in document) {
+        document.startViewTransition(function () { window.location.href = destUrl; });
+      } else {
+        window.location.href = destUrl;
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
   /* ── Star-bubble exit: particles pop up and float across the page ── */
   function playStarBubble(destUrl) {
     var W = window.innerWidth, H = window.innerHeight;
@@ -182,7 +243,11 @@
     var goingToSim  = /sun-venus|n-body|barnes-hut/.test(dest);
     var goingToUdte = /\/UDTE\/?($|index)/.test(dest) && !goingToSim;
 
-    if (goingToSim || goingToUdte) {
+    if (goingToSim) {
+      playStarWarpEased(dest);
+      return;
+    }
+    if (goingToUdte) {
       playStarBubble(dest);
       return;
     }
