@@ -162,11 +162,17 @@
     }
   </style>
 </head>
-<body>
+<body data-page="udte-landing">
+
+<nav style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.9);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:24px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;">
+  <a href="https://quequsai.github.io/" style="color:#94a3b8;text-decoration:none;font-weight:700;">QUSAI QURESH</a>
+  <span style="color:#0f2744;">|</span>
+  <a href="./" style="color:#38bdf8;text-decoration:none;font-weight:700;">UDTE</a>
+</nav>
 
 <canvas id="stars"></canvas>
 
-<div class="page">
+<div class="page" style="padding-top:100px;">
   <div class="label">CPSC 4990 — Independent Study</div>
   <h1>Universal Digital Twin Engine</h1>
   <div class="subtitle">QUSAI QURESH &nbsp;·&nbsp; APRIL 2026 &nbsp;·&nbsp; UNIVERSITY OF LETHBRIDGE</div>
@@ -271,5 +277,6 @@
     btn.addEventListener('click', () => apply(root.getAttribute('data-theme') !== 'light'));
   })();
 </script>
+<script src="transitions.js"></script>
 </body>
 </html>

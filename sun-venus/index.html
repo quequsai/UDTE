@@ -8,10 +8,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-page="sim">
 
 <!-- ══════════════════════════ SITE NAV ══════════════════════════ -->
 <nav style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.97);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em;">
+  <a href="https://quequsai.github.io/" style="color:#94a3b8;text-decoration:none;font-weight:700;">QUSAI QURESH</a>
+  <span style="color:#0f2744;">|</span>
   <a href="../" style="color:#94a3b8;text-decoration:none;font-weight:700;">UDTE</a>
   <span style="color:#0f2744;">|</span>
   <a href="../sun-venus/" style="color:#38bdf8;text-decoration:none;font-weight:700;">SUN-VENUS</a>
@@ -90,7 +92,7 @@
             <div class="flex justify-between text-[9px] font-black text-slate-500 uppercase">
                 <span>Zoom</span><span id="zoomLabel" class="mono text-sky-400">1.0</span>
             </div>
-            <input type="range" id="zoomSlider" min="0.001" max="200" step="0.001" value="1">
+            <input type="range" id="zoomSlider" min="0.001" max="8" step="0.01" value="1">
         </div>
     </div>
 
@@ -109,6 +111,10 @@
         <p class="text-[9px] text-slate-600 leading-relaxed">
             Where bodies should be per JPL Horizons actual data (when in range 1900–2100) and analytic Kepler propagation. Drift vs sim reveals light-delay and integration error.
         </p>
+        <div style="font-size:9px;color:#475569;font-family:ui-monospace,monospace;letter-spacing:.04em;line-height:1.7;padding-top:2px;">
+          <span style="color:#22c55e;">●</span> Horizons = real NASA ephemeris<br>
+          <span style="color:#a78bfa;">●</span> Kepler = analytic two-body solution
+        </div>
         <div id="refTelemetry" class="space-y-3 text-[10px] mono text-slate-400"></div>
     </div>
 
@@ -259,5 +265,6 @@
     }
   })();
 </script>
+<script src="../transitions.js"></script>
 </body>
 </html>

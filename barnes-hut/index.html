@@ -77,10 +77,12 @@
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col md:flex-row" style="padding-top:40px;">
+<body data-page="sim" class="h-screen w-screen flex flex-col md:flex-row" style="padding-top:40px;">
 
 <!-- ══════════════════════════ SITE NAV ══════════════════════════ -->
 <nav style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(2,6,23,0.97);border-bottom:1px solid #0f2744;padding:0 20px;height:40px;display:flex;align-items:center;gap:32px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.08em;">
+  <a href="https://quequsai.github.io/" style="color:#94a3b8;text-decoration:none;font-weight:700;">QUSAI QURESH</a>
+  <span style="color:#0f2744;">|</span>
   <a href="../" style="color:#94a3b8;text-decoration:none;font-weight:700;">UDTE</a>
   <span style="color:#0f2744;">|</span>
   <a href="../sun-venus/" style="color:#94a3b8;text-decoration:none;font-weight:700;">SUN-VENUS</a>
@@ -375,10 +377,7 @@
         bodies.push(new Body(d, 0, 0, v, m, '#ffffff', 2, 'Satellite'));
     }
 
-    function update() {
-        if (!isRunning) return;
-        const dt = 0.005 * timeScale;
-
+    function update(dt) {
         // Leapfrog Integration
         // 1. Kick-Drift
         bodies.forEach(b => {
@@ -386,11 +385,6 @@
             b.vy += b.ay * (dt/2);
             b.x += b.vx * dt;
             b.y += b.vy * dt;
-            
-            if (frameCount % 20 === 0) {
-                b.history.push({x: b.x, y: b.y});
-                if (b.history.length > 500) b.history.shift();
-            }
         });
 
         // 2. Build Tree & Calculate Acceleration
@@ -408,7 +402,17 @@
 
     let frameCount = 0;
     function draw() {
-        update();
+        if (isRunning) {
+            const steps  = Math.max(1, Math.round(timeScale));
+            const stepDt = 0.005 * (timeScale / steps);
+            for (let i = 0; i < steps; i++) update(stepDt);
+            if (frameCount % 20 === 0) {
+                bodies.forEach(b => {
+                    b.history.push({x: b.x, y: b.y});
+                    if (b.history.length > 500) b.history.shift();
+                });
+            }
+        }
         ctx.fillStyle = '#020617';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         bodies.forEach(b => b.draw());
@@ -494,5 +498,6 @@
     }
   })();
 </script>
+<script src="../transitions.js"></script>
 </body>
 </html>
