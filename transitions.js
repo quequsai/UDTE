@@ -32,7 +32,7 @@
       stars.push({ ox: sx, oy: sy, angle: angle, r: sr, a: sa });
     }
 
-    var DURATION = 1400;
+    var DURATION = 1200;
     var start = null;
 
     function ease(t) {
@@ -75,11 +75,7 @@
         }
       }
 
-      if (t > 0.87) {
-        ctx.fillStyle = 'rgba(0,0,12,' + ((t - 0.87) / 0.13) + ')';
-        ctx.fillRect(0, 0, W, H);
-      }
-
+      /* No blackout — navigate while stars are at full stretch */
       if (t < 1) { requestAnimationFrame(frame); }
       else { window.location.href = destUrl; }
     }
@@ -96,7 +92,7 @@
     var cvs = document.createElement('canvas');
     cvs.width = W;
     cvs.height = H;
-    cvs.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;transition:opacity 0.35s ease;';
+    cvs.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;';
     document.body.appendChild(cvs);
     var ctx = cvs.getContext('2d');
 
@@ -113,7 +109,7 @@
       stars.push({ ox: sx, oy: sy, angle: angle, r: sr, a: sa });
     }
 
-    var DURATION = 950;
+    var DURATION = 1400;
     var start = null;
 
     /* Decelerating: fast start, slow end */
@@ -125,6 +121,10 @@
       if (!start) start = now;
       var t = Math.min((now - start) / DURATION, 1);
       var e = easeOut(t); /* e: 0→1, fast then slow */
+
+      /* Canvas fades out from t=0.4 onward — page bleeds through while
+         stars are still decelerating rather than appearing after they stop */
+      cvs.style.opacity = t < 0.4 ? '1' : String(Math.max(0, 1 - (t - 0.4) / 0.6));
 
       /* Background fades from opaque to transparent as stars settle */
       var bgA = 0.9 - e * 0.88;
@@ -168,9 +168,7 @@
       if (t < 1) {
         requestAnimationFrame(frame);
       } else {
-        /* Fade canvas out over 0.35s to reveal the page */
-        cvs.style.opacity = '0';
-        cvs.addEventListener('transitionend', function () { cvs.remove(); }, { once: true });
+        cvs.remove();
       }
     }
 
