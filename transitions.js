@@ -41,10 +41,20 @@
     return true;
   }
 
+  /* ── Bfcache cleanup: remove any canvas left over when browser restores from cache ── */
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+      document.querySelectorAll('canvas.tr-overlay').forEach(function (c) { c.remove(); });
+      ov.style.animation = '';
+      ov.style.opacity   = '0';
+    }
+  });
+
   /* ── Star-bubble exit: particles pop up and float across the page ── */
   function playStarBubble(destUrl) {
     var W = window.innerWidth, H = window.innerHeight;
     var cvs = document.createElement('canvas');
+    cvs.className = 'tr-overlay';
     cvs.width = W; cvs.height = H;
     cvs.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;';
     document.body.appendChild(cvs);
@@ -83,6 +93,7 @@
   function playStarReveal() {
     var W = window.innerWidth, H = window.innerHeight;
     var cvs = document.createElement('canvas');
+    cvs.className = 'tr-overlay';
     cvs.width = W; cvs.height = H;
     cvs.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;';
     document.body.appendChild(cvs);
