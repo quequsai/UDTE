@@ -1,175 +1,113 @@
 (function () {
   var PAGE = document.body.dataset.page || 'doc';
 
-  /* ── Seeded RNG (matches UDTE/hub starfield, seed 42) ── */
-  function seededRng(seed) {
-    var s = seed;
-    return function () {
-      s = (s * 1664525 + 1013904223) & 0xffffffff;
-      return (s >>> 0) / 0xffffffff;
+  /* ── Particle helpers ── */
+  function makeParticle(W, H) {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: -(0.6 + Math.random() * 1.0),
+      wobble: Math.random() * Math.PI * 2,
+      wobbleSpeed: 0.022 + Math.random() * 0.028,
+      r: 1.2 + Math.random() * 2.2,
+      alpha: 0.45 + Math.random() * 0.45,
+      born: null,
+      lifespan: 1400 + Math.random() * 800,
     };
   }
 
-  /* ── Canvas hyperspace: stars stretch outward, fade to dark ── */
-  function playHyperspace(destUrl) {
-    var W = window.innerWidth, H = window.innerHeight;
-    var cx = W / 2, cy = H / 2;
-    var maxDim = Math.sqrt(W * W + H * H);
+  function tickParticle(ctx, p, now) {
+    if (!p.born) p.born = now;
+    var age = (now - p.born) / p.lifespan;
+    if (age >= 1) return false;
 
+    p.wobble += p.wobbleSpeed;
+    p.x += p.vx + Math.sin(p.wobble) * 0.25;
+    p.y += p.vy;
+
+    var fade = age < 0.15 ? age / 0.15 : age > 0.7 ? 1 - (age - 0.7) / 0.3 : 1;
+    var a = p.alpha * fade;
+    if (a <= 0.01) return true;
+
+    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 2.8);
+    g.addColorStop(0,    'rgba(255,255,255,' + a + ')');
+    g.addColorStop(0.35, 'rgba(185,220,255,' + (a * 0.55) + ')');
+    g.addColorStop(1,    'rgba(100,160,255,0)');
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * 2.8, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    return true;
+  }
+
+  /* ── Star-bubble exit: particles pop up and float across the page ── */
+  function playStarBubble(destUrl) {
+    var W = window.innerWidth, H = window.innerHeight;
     var cvs = document.createElement('canvas');
-    cvs.width = W;
-    cvs.height = H;
+    cvs.width = W; cvs.height = H;
     cvs.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;';
     document.body.appendChild(cvs);
     var ctx = cvs.getContext('2d');
 
-    var rng = seededRng(42);
-    var stars = [];
-    for (var i = 0; i < 500; i++) {
-      var sx = rng() * W, sy = rng() * H;
-      var sr = rng() * 1.2 + 0.2, sa = rng() * 0.6 + 0.1;
-      var angle = Math.atan2(sy - cy, sx - cx);
-      stars.push({ ox: sx, oy: sy, angle: angle, r: sr, a: sa });
-    }
-
-    var DURATION = 1200;
+    var particles = [];
+    var DURATION = 900;
     var start = null;
-
-    function ease(t) {
-      return t < 0.35 ? t * t * 0.816 : 0.1 + Math.pow((t - 0.35) / 0.65, 2.6) * 0.9;
-    }
+    var lastSpawn = 0;
 
     function frame(now) {
-      if (!start) start = now;
+      if (!start) { start = now; lastSpawn = now; }
       var t = Math.min((now - start) / DURATION, 1);
-      var e = ease(t);
 
-      var bgA = 0.08 + e * 0.65;
-      ctx.fillStyle = 'rgba(0,0,12,' + bgA + ')';
-      ctx.fillRect(0, 0, W, H);
+      ctx.clearRect(0, 0, W, H);
 
-      for (var i = 0; i < stars.length; i++) {
-        var s = stars[i];
-        var travel   = e * maxDim * 1.5;
-        var hx = s.ox + Math.cos(s.angle) * travel;
-        var hy = s.oy + Math.sin(s.angle) * travel;
-        var trailLen = Math.max(0, e - 0.08) * maxDim * 0.55;
-        var tx = s.ox + Math.cos(s.angle) * Math.max(0, travel - trailLen);
-        var ty = s.oy + Math.sin(s.angle) * Math.max(0, travel - trailLen);
-        if (travel - trailLen > maxDim * 1.6) continue;
-        var alpha = s.a * Math.min(1, e * 8 + 0.25);
-        if (e < 0.1) {
-          ctx.beginPath();
-          ctx.arc(s.ox, s.oy, s.r, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255,255,255,' + (s.a * (0.3 + e / 0.1 * 0.7)) + ')';
-          ctx.fill();
-        } else {
-          var grad = ctx.createLinearGradient(tx, ty, hx, hy);
-          grad.addColorStop(0,   'rgba(100,190,255,0)');
-          grad.addColorStop(0.3, 'rgba(160,215,255,' + (alpha * 0.45) + ')');
-          grad.addColorStop(1,   'rgba(255,255,255,' + alpha + ')');
-          ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy);
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = s.r * 1.1;
-          ctx.stroke();
-        }
+      /* Accelerating spawn — more stars appear as transition progresses */
+      var target = Math.round(t * t * 75 + t * 25);
+      if (particles.length < target && now - lastSpawn > 8) {
+        particles.push(makeParticle(W, H));
+        lastSpawn = now;
       }
 
-      /* No blackout — navigate while stars are at full stretch */
-      if (t < 1) { requestAnimationFrame(frame); }
-      else { window.location.href = destUrl; }
+      for (var i = particles.length - 1; i >= 0; i--) {
+        if (!tickParticle(ctx, particles[i], now)) particles.splice(i, 1);
+      }
+
+      if (t < 1) requestAnimationFrame(frame);
+      else window.location.href = destUrl;
     }
 
     requestAnimationFrame(frame);
   }
 
-  /* ── Canvas deceleration: streaks contract to dots, canvas fades out ── */
-  function playDeceleration() {
+  /* ── Star-reveal entrance: pre-seeded particles drift away to reveal page ── */
+  function playStarReveal() {
     var W = window.innerWidth, H = window.innerHeight;
-    var cx = W / 2, cy = H / 2;
-    var maxDim = Math.sqrt(W * W + H * H);
-
     var cvs = document.createElement('canvas');
-    cvs.width = W;
-    cvs.height = H;
+    cvs.width = W; cvs.height = H;
     cvs.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;';
     document.body.appendChild(cvs);
     var ctx = cvs.getContext('2d');
 
-    /* Fill immediately so the page doesn't flash before animation starts */
-    ctx.fillStyle = '#00000f';
-    ctx.fillRect(0, 0, W, H);
+    var particles = [];
+    var now0 = performance.now();
 
-    var rng = seededRng(42);
-    var stars = [];
-    for (var i = 0; i < 500; i++) {
-      var sx = rng() * W, sy = rng() * H;
-      var sr = rng() * 1.2 + 0.2, sa = rng() * 0.6 + 0.1;
-      var angle = Math.atan2(sy - cy, sx - cx);
-      stars.push({ ox: sx, oy: sy, angle: angle, r: sr, a: sa });
-    }
-
-    var DURATION = 1400;
-    var start = null;
-
-    /* Decelerating: fast start, slow end */
-    function easeOut(t) {
-      return 1 - Math.pow(1 - t, 2.8);
+    /* Scatter 100 particles at various stages of their life so the screen
+       feels already full of stars and they gradually drift away */
+    for (var i = 0; i < 100; i++) {
+      var p = makeParticle(W, H);
+      p.born = now0 - Math.random() * 800;
+      particles.push(p);
     }
 
     function frame(now) {
-      if (!start) start = now;
-      var t = Math.min((now - start) / DURATION, 1);
-      var e = easeOut(t); /* e: 0→1, fast then slow */
+      ctx.clearRect(0, 0, W, H);
 
-      /* Canvas fades out from t=0.4 onward — page bleeds through while
-         stars are still decelerating rather than appearing after they stop */
-      cvs.style.opacity = t < 0.4 ? '1' : String(Math.max(0, 1 - (t - 0.4) / 0.6));
-
-      /* Background fades from opaque to transparent as stars settle */
-      var bgA = 0.9 - e * 0.88;
-      ctx.fillStyle = 'rgba(0,0,12,' + Math.max(0, bgA) + ')';
-      ctx.fillRect(0, 0, W, H);
-
-      for (var i = 0; i < stars.length; i++) {
-        var s = stars[i];
-
-        /* Streaks start far out and contract toward resting positions */
-        var remaining = (1 - e);
-        var travel    = remaining * maxDim * 1.3;
-        var trailLen  = remaining * maxDim * 0.5;
-
-        var hx = s.ox + Math.cos(s.angle) * travel;
-        var hy = s.oy + Math.sin(s.angle) * travel;
-        var tx = s.ox + Math.cos(s.angle) * Math.max(0, travel - trailLen);
-        var ty = s.oy + Math.sin(s.angle) * Math.max(0, travel - trailLen);
-
-        var alpha = s.a * Math.min(1, remaining * 5);
-
-        if (e > 0.82) {
-          /* Near rest: transition to dot */
-          var dotA = s.a * Math.min(1, (1 - e) * 8);
-          ctx.beginPath();
-          ctx.arc(s.ox, s.oy, s.r, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255,255,255,' + dotA + ')';
-          ctx.fill();
-        } else {
-          var grad = ctx.createLinearGradient(hx, hy, tx, ty);
-          grad.addColorStop(0,   'rgba(255,255,255,' + alpha + ')');
-          grad.addColorStop(0.5, 'rgba(160,215,255,' + (alpha * 0.5) + ')');
-          grad.addColorStop(1,   'rgba(100,190,255,0)');
-          ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy);
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = s.r * 1.1;
-          ctx.stroke();
-        }
+      for (var i = particles.length - 1; i >= 0; i--) {
+        if (!tickParticle(ctx, particles[i], now)) particles.splice(i, 1);
       }
 
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        cvs.remove();
-      }
+      if (particles.length > 0) requestAnimationFrame(frame);
+      else cvs.remove();
     }
 
     requestAnimationFrame(frame);
@@ -194,7 +132,7 @@
 
   /* ── Entrance ── */
   if (PAGE === 'udte-landing' || PAGE === 'sim') {
-    playDeceleration();
+    playStarReveal();
   } else if (PAGE === 'doc') {
     ov.style.animation = 'enter-doc 400ms ease forwards';
     ov.addEventListener('animationend', function () {
@@ -222,12 +160,11 @@
     e.preventDefault();
     var dest = a.href || new URL(raw, location.href).href;
 
-    /* Navigating to a simulation or UDTE landing from docs/report → warp */
-    var goingToSim = /sun-venus|n-body|barnes-hut/.test(dest);
+    var goingToSim  = /sun-venus|n-body|barnes-hut/.test(dest);
     var goingToUdte = /\/UDTE\/?($|index)/.test(dest) && !goingToSim;
 
     if (goingToSim || goingToUdte) {
-      playHyperspace(dest);
+      playStarBubble(dest);
       return;
     }
 
@@ -252,9 +189,9 @@
       return;
     }
 
-    /* Back to portfolio hub: warp out */
+    /* Back to portfolio hub */
     if (/quequsai\.github\.io\/?$/.test(dest)) {
-      playHyperspace(dest);
+      playStarBubble(dest);
       return;
     }
 
